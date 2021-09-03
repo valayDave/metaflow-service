@@ -158,7 +158,7 @@ class DockerTestEnvironment:
     
     def _build_mdservice_image(self):
         dockerfileobj = open(self._docker_file_path)
-        image,log_generator = self._docker.images.build(fileobj=dockerfileobj,tag=self._image_name,)
+        image,log_generator = self._docker.images.build(path=self._docker_file_path,fileobj=dockerfileobj,tag=self._image_name,)
         return image
     
     def _find_network(self):

@@ -2,7 +2,7 @@ import abc
 import docker
 from docker.errors import BuildError, NotFound, APIError
 import time
-from .versioned_tests import EnvConfig,MFTestRunner
+from versioned_tests import EnvConfig,MFTestRunner
 POSTGRES_IMAGE = 'postgres:9-alpine'
 
 class IpNotResolved(Exception):

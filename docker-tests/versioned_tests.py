@@ -1,5 +1,5 @@
-# These are the tests that helps run different versions of metaflow
-# Environments are inheritted. 
+# This is the a test runner for various metaflow versions. It will run test cases with different versions of the metaflow clients. 
+# Very barebone; Needs polishing to make it very efficient and customizable. 
 import os
 import glob
 from sys import version
@@ -270,9 +270,9 @@ class MFTestRunner:
         shutil.rmtree(self.temp_env_store)
 
 
-def run_tests():
-    test_runner = MFTestRunner('./test_flows',EnvConfig(),versions=METAFLOW_VERSIONS,)
-    test_runner.run_tests()
+# def run_tests():
+#     test_runner = MFTestRunner('./test_flows',EnvConfig(),versions=METAFLOW_VERSIONS,)
+#     test_runner.run_tests()
 
-if __name__ == '__main__':
-    run_tests()
+# if __name__ == '__main__':
+#     run_tests()

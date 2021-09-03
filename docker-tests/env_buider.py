@@ -4,7 +4,7 @@ from docker.errors import BuildError, NotFound, APIError
 import time
 from versioned_tests import EnvConfig,MFTestRunner
 POSTGRES_IMAGE = 'postgres:9-alpine'
-
+import os 
 class IpNotResolved(Exception):
     headline = 'IP Address of Container Unresolvable'
     def __init__(self, container_name='',container_id='', lineno=None):
@@ -40,7 +40,7 @@ class DockerTestEnvironment:
                 database_port = 5432,
                 image_name = 'metaflow_metadata_service',
                 network_name='postgres-network',\
-                docker_file_path='../Dockerfile') -> None:
+                docker_file_path=os.path.abspath('../Dockerfile')) -> None:
         
         self._docker = docker.DockerClient(base_url='unix://var/run/docker.sock')
         

@@ -1,5 +1,6 @@
 import abc
 import docker
+import click
 from docker.errors import BuildError, NotFound, APIError
 import time
 from versioned_tests import EnvConfig,MFTestRunner
@@ -38,11 +39,15 @@ class DockerTestEnvironment:
                 database_password='password',
                 database_user='metaflow',
                 database_port = 5432,
+                logger=None,
                 image_name = 'metaflow_metadata_service',
                 network_name='postgres-network',\
+                image_build_path='../',\
                 docker_file_path=os.path.abspath('../Dockerfile')) -> None:
         
         self._docker = docker.DockerClient(base_url='unix://var/run/docker.sock')
+
+        self._logger = logger if logger is not None else lambda *args:print(*args)
         
         # Network Related Properties
         self._network = None
@@ -62,12 +67,16 @@ class DockerTestEnvironment:
         self._image_name = image_name # Image of MD Service
         self._metadataservice_container = None
         self._metadata_image = None
+        self._image_build_path = image_build_path
         self._metadataservice_name = 'testharness-metadataservice'
     
     def lifecycle(self):
         # Create the network and the image. 
+        self._logger('Creating New Environment',fg='green')
         self._create_enivornment()
+        self._logger('Environment Created',fg='green')
         self._run_tests()
+        self._logger('Tearing down environment',fg='green')
         self._teardown_environment()
         
     def _run_tests(self):
@@ -78,20 +87,24 @@ class DockerTestEnvironment:
             self._metadataservice_container,
             self._database_container
         ]
+        self._logger('Stopping all containers',fg='blue')
         # first stop all containers
         for container in container_set:
             container.stop(timeout=10)
             container.reload()
+        
+        self._logger('Removing all containers',fg='blue')
         # Then remove all the containers
         for container in container_set:
             container.remove()
         
+        self._logger('Removing Network',fg='blue')
         # Remove the network 
         self._network.remove()
 
-        
+        self._logger('Removing Docker Images',fg='blue')
         # remove the images.
-        self._docker.images.remove(self._metadata_image.name)
+        self._docker.images.remove(self._metadata_image.id)
         
     
     def _db_env_vars(self):
@@ -133,14 +146,17 @@ class DockerTestEnvironment:
         }
 
     def _create_enivornment(self):
+        self._logger('Creating a network',fg='blue')
         self._network = self._find_network()
         
         if self._network is None:
             self._network = self._create_network()
         
         # Build the image of the Metadata service.
+        self._logger('Building Metadata Image',fg='blue')
         self._metadata_image = self._build_mdservice_image()
 
+        self._logger('Creating Postgres Docker Container',fg='blue')
         # Create the Postgres container
         self._database_container = self._docker.containers.run(POSTGRES_IMAGE,\
                                             detach=True,\
@@ -148,17 +164,19 @@ class DockerTestEnvironment:
                                             environment=self._db_env_vars(),\
                                             network=self._network_name,)
         
+        self._logger('Creating Metadata Service Container',fg='blue')
         # Create the metadata service container
         self._metadataservice_container = self._docker.containers.run(self._image_name,\
                                                     detach=True,\
-                                                    envionment=self._mdcontainer_env_vars(),\
+                                                    environment=self._mdcontainer_env_vars(),\
                                                     ports=self._mdservice_ports(),\
                                                     )
         
     
     def _build_mdservice_image(self):
-        dockerfileobj = open(self._docker_file_path)
-        image,log_generator = self._docker.images.build(path=self._docker_file_path,fileobj=dockerfileobj,tag=self._image_name,)
+        image,log_generator = self._docker.images.build(path=self._image_build_path,\
+                                                        dockerfile=self._docker_file_path,\
+                                                        tag=self._image_name,)
         return image
     
     def _find_network(self):
@@ -173,7 +191,9 @@ class DockerTestEnvironment:
         return self._docker.networks.create(self._network_name)
 
 def run_tests():
-    test_runner = DockerTestEnvironment()
+    test_runner = DockerTestEnvironment(
+        logger=click.secho
+    )
     test_runner.lifecycle()
 
 if __name__ == '__main__':

@@ -1,5 +1,4 @@
 from subprocess import Popen, PIPE
-import shlex
 from ..data.postgres_async_db import PostgresUtils
 from . import version_dict, latest, goose_template, \
     goose_migration_template
@@ -27,7 +26,7 @@ class ApiUtils(object):
     async def get_goose_version():
         # if tables exist but goose doesn't find version table then
         goose_version_cmd = goose_template.format(
-            database_name, shlex.quote(user), shlex.quote(password), host,
+            database_name, user, password, host,
             port, "version"
         )
 
@@ -59,7 +58,7 @@ class ApiUtils(object):
             return version_dict[version]
         else:
             goose_version_cmd = goose_migration_template.format(
-                database_name, shlex.quote(user), shlex.quote(password), host, port,
+                database_name, user, password, host, port,
                 "up"
             )
             p = Popen(goose_version_cmd, shell=True,
@@ -70,7 +69,7 @@ class ApiUtils(object):
     @staticmethod
     async def is_migration_in_progress():
         goose_version_cmd = goose_template.format(
-            database_name, shlex.quote(user), shlex.quote(password), host,
+            database_name, user, password, host,
             port, "status"
         )
 

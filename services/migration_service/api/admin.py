@@ -2,7 +2,6 @@ import os
 import json
 from aiohttp import web
 from subprocess import Popen
-import shlex
 from multidict import MultiDict
 from .utils import ApiUtils
 from . import goose_migration_template
@@ -70,7 +69,7 @@ class AdminApi(object):
                 description: could not upgrade
         """
         goose_version_cmd = goose_migration_template.format(
-            database_name, user,shlex.quote(password), host, port,
+            database_name, user, password, host, port,
             "up"
         )
         p = Popen(goose_version_cmd, shell=True,

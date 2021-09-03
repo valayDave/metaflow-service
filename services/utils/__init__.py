@@ -121,4 +121,4 @@ class DBConfiguration(object):
     @property
     def dsn(self):
         return self._dsn or "dbname={0} user={1} password={2} host={3} port={4}".format(
-            self.database_name, urlencode(self.user), urlencode(self.password), self.host, self.port)
+            self.database_name, self.user, self.password, self.host, self.port)

@@ -19,6 +19,8 @@ class DockerTestEnvironment:
         create_env 
             --> setup network
             --> setup image of the repo
+            --> create database container
+            --> create mdservice container from image
 
         run_tests
             --> containers setup tests
@@ -74,10 +76,11 @@ class DockerTestEnvironment:
         # Create the network and the image. 
         self._logger('Creating New Environment',fg='green')
         self._create_enivornment()
-        self._logger('Environment Created',fg='green')
+        self._logger('Environment Created, Now Running Tests',fg='green')
         self._run_tests()
-        self._logger('Tearing down environment',fg='green')
+        self._logger('Completed Tests, Tearing down environment',fg='green')
         self._teardown_environment()
+        self._logger('Finished Running Test ! Wohoo!',fg='green')
         
     def _run_tests(self):
         pass

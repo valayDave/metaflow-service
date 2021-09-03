@@ -12,7 +12,7 @@ class IpNotResolved(Exception):
         self.line_no = lineno
         super(IpNotResolved, self).__init__()
 
-class DockerTestEnvironment(metaclass=abc.ABCMeta):
+class DockerTestEnvironment:
     """ 
     Lifecycle :
         create_env 
@@ -171,3 +171,10 @@ class DockerTestEnvironment(metaclass=abc.ABCMeta):
 
     def _create_network(self):
         return self._docker.networks.create(self._network_name)
+
+def run_tests():
+    test_runner = DockerTestEnvironment()
+    test_runner.lifecycle()
+
+if __name__ == '__main__':
+    run_tests()

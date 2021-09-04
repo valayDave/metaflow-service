@@ -292,7 +292,7 @@ class MFTestRunner:
         
         results = []
         for p in processes:
-            results.append(load_json(p.saved_file_name))
+            results.extend(load_json(p.saved_file_name))
         shutil.rmtree(self.temp_env_store)
         return results
 

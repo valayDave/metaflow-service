@@ -114,7 +114,7 @@ class DockerTestEnvironment:
         )
         test_results = test_runner.run_tests()
         for res in test_results:
-            message = f"Successfull executed flow {res['flow']}/{res['run']} with Metaflow version {res['version']}"
+            message = f"Successfully executed flow {res['flow']}/{res['run']} with Metaflow version {res['version']}"
             fg='green'
             if not res['success']:
                 message = f"Failed in executing flow {res['flow']}/{res['run']} with Metaflow version {res['version']}"

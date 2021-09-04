@@ -1,4 +1,5 @@
 import abc
+import shutil
 import docker
 import click
 from docker.errors import BuildError, NotFound, APIError
@@ -41,6 +42,7 @@ class DockerTestEnvironment:
     def __init__(self,\
                 versions = METAFLOW_VERSIONS,\
                 flow_dir = './test_flows',\
+                temp_env_store='./tmp_verions',\
                 max_ip_wait_time = 20,\
                 database_name='metaflow',
                 database_password='password',
@@ -80,6 +82,7 @@ class DockerTestEnvironment:
         # Local Test Harness Related Configuration
         self._flow_dir = flow_dir
         self._mf_versions = versions
+        self._temp_env_store = temp_env_store
     
     def lifecycle(self):
         # Create the network and the image. 
@@ -107,6 +110,7 @@ class DockerTestEnvironment:
                 metadata_url=url
             ),
             versions=self._mf_versions,
+            temp_env_store=self._temp_env_store,
         )
         test_runner.run_tests()
 
@@ -133,6 +137,9 @@ class DockerTestEnvironment:
         self._logger('Removing Docker Images',fg='blue')
         # remove the images.
         self._docker.images.remove(self._metadata_image.id)
+        
+        # remove temporary directory of MF versions
+        shutil.rmtree(self._temp_env_store)
         
     
     def _db_env_vars(self):

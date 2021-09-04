@@ -207,8 +207,8 @@ class FlowInstanceTest(Process):
     
     def _init_logging(self):
         import sys
-        sys.stdout = open(str(os.getpid()) + ".out", "a", buffering=0)
-        sys.stderr = open(str(os.getpid()) + "_error.out", "a", buffering=0)
+        sys.stdout = open(str(os.getpid()) + ".out", "a", buffering=1)
+        sys.stderr = open(str(os.getpid()) + "_error.out", "a", buffering=1)
     
     def metadata(self):
         import json

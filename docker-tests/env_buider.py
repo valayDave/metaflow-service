@@ -8,7 +8,7 @@ import traceback
 
 from docker.models.containers import Container
 from versioned_tests import EnvConfig,MFTestRunner,METAFLOW_VERSIONS
-POSTGRES_IMAGE = 'postgres:9-alpine'
+POSTGRES_IMAGE = 'postgres:latest'
 import os 
 class IpNotResolved(Exception):
     headline = 'IP Address of Container Unresolvable'
@@ -146,6 +146,7 @@ class DockerTestEnvironment:
         return dict(
             POSTGRES_USER=self._database_password,
             POSTGRES_PASSWORD=self._database_user,
+            POSTGRES_DB=self._database_name
         )
     
     def _resolve_ipaddr(self,container:Container,wait_time=None):

@@ -27,7 +27,7 @@ class DockerTestEnvironment:
             --> create mdservice container from image
 
         run_tests
-            --> containers setup tests
+            --> MFTestRunner
             --> 
             --> 
             -->
@@ -253,13 +253,3 @@ class DockerTestEnvironment:
 
     def _create_network(self):
         return self._docker.networks.create(self._network_name)
-
-def run_tests():
-    test_runner = DockerTestEnvironment(
-        logger=click.secho,
-        database_password="kkkkkksssss$asfsfasdfas&*safa>h]&WD}_mU!AgOm"
-    )
-    test_runner.lifecycle()
-
-if __name__ == '__main__':
-    run_tests()

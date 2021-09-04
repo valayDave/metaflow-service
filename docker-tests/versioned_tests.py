@@ -159,7 +159,8 @@ class TestEnvironment:
             pass
         return dict(
             flow=flow,
-            run=runid
+            run=runid,
+            logs = run_response.decode('utf-8')
         )
 
     

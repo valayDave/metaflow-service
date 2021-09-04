@@ -282,9 +282,10 @@ class MFTestRunner:
         # create a session Id for each test
         # Make a virtual environment in the same name in temp dir
         tests = self._make_tests()
-        response  = Parallel(n_jobs=self._max_concurrent_tests)(delayed(run_test)(*test) for test in tests)
+        # response  = Parallel(n_jobs=self._max_concurrent_tests)(delayed(run_test)(*test) for test in tests)
         results = []
-        for p in response:
+        for test in tests:
+            p = run_test(*test)
             results.extend(load_json(p))
         shutil.rmtree(self.temp_env_store)
         return results

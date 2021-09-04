@@ -285,8 +285,11 @@ class MFTestRunner:
         # response  = Parallel(n_jobs=self._max_concurrent_tests)(delayed(run_test)(*test) for test in tests)
         results = []
         for test in tests:
-            p = run_test(*test)
-            results.extend(load_json(p))
+            try:
+                p = run_test(*test)
+                results.extend(load_json(p))
+            except:
+                pass
         shutil.rmtree(self.temp_env_store)
         return results
 

@@ -208,9 +208,11 @@ class FlowInstanceTest(Process):
         self.temp_dir=temp_dir
         self._version = version_number
         self.envionment_config = envionment_config
-        logger_name = self.get_logger_name(version_number)
-        self.logger_name = logger_name
-        self.logger = create_logger(logger_name)
+        self.logger = create_logger(self.logger_name)
+    
+    @property
+    def logger_name(self):
+        return f'FlowInstanceTest-{TestEnvironment.session_id_hash(self._version)}-{self._version}'
     
     @property
     def saved_file_name(self):

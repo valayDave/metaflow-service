@@ -168,7 +168,7 @@ class DockerTestEnvironment:
 
     def _mdcontainer_env_vars(self):
         ip_addr = None
-        ip_addr = self._resolve_ipaddr(self._database_container)
+        ip_addr = self._resolve_ipaddr(self._database_container,wait_time=120)
         self._logger(f'Using DB Ip Address {ip_addr} ',fg='gree')
         return dict(
             MF_METADATA_DB_HOST = ip_addr,

@@ -146,11 +146,14 @@ class TestEnvironment:
     def _get_runid(self,run_response):
         lines = run_response.decode('utf-8').split('\n')
         # print(lines)
-        runidstr=lines[5].split(' Workflow starting ')[1]
-        datadict = WORKFLOW_EXTRACT_REGEX.match(runidstr).groupdict()
-        runid = datadict['runid']
-
-        flow = FLOW_EXTRACTOR_REGEX.match(lines[0]).groupdict()['flow']
+        flow,runid=None,None
+        try:
+            runidstr=lines[5].split(' Workflow starting ')[1]
+            datadict = WORKFLOW_EXTRACT_REGEX.match(runidstr).groupdict()
+            runid = datadict['runid']
+            flow = FLOW_EXTRACTOR_REGEX.match(lines[0]).groupdict()['flow']
+        except IndexError:
+            pass
         return dict(
             flow=flow,
             run=runid

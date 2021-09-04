@@ -202,10 +202,10 @@ class TestEnvironment:
         shutil.rmtree(self.env_path)
 
 
-class FlowInstanceTest(Process):
+class FlowInstanceTest:
     # this should use the TestEnvironment and run the actual test
     def __init__(self,version_number,flow_files,temp_dir,envionment_config) -> None:
-        Process.__init__(self,daemon=False,) # Making it a deamon process. 
+        # Process.__init__(self,daemon=False,) # Making it a deamon process. 
         self.version_number,self.flow_files = version_number,flow_files
         self.temp_dir=temp_dir
         self._version = version_number
@@ -247,14 +247,13 @@ class FlowInstanceTest(Process):
             self.logger.debug(f"Saving File : {file} On Version : {self.version_number}")
             filename = self.saved_file_name
             save_json(test_res_data,filename)
+            return filename
 
-        
 
-    def shutdown(self,signal_received, frame):
-        # Handle any cleanup here
-        self.logger.info('SIGINT or CTRL-C detected. Exiting gracefully')
-        exit(0)
-
+def run_test(version_number,flow_files,temp_dir,envionment_config):
+    return FlowInstanceTest(
+        version_number,flow_files,temp_dir,envionment_config
+    ).run()
 
 class MFTestRunner:
 
@@ -284,18 +283,11 @@ class MFTestRunner:
         # Make a virtual environment in the same name in temp dir
         tests = self._make_tests()
         processes = []
-        for test in tests:
-            process = FlowInstanceTest(*test)
-            process.start()
-            processes.append(process)
-            time.sleep(10)
-        
-        for p in processes:
-            p.join()
-        
+        pool = multiprocessing.Pool(processes=self._max_concurrent_tests)
+        response = pool.starmap(run_test,tests)
         results = []
-        for p in processes:
-            results.extend(load_json(p.saved_file_name))
+        for p in response:
+            results.extend(load_json(p))
         shutil.rmtree(self.temp_env_store)
         return results
 

@@ -3,7 +3,7 @@ import click
 import os
 
 @click.command()
-@click.option('--database-password',default='metaflow')
+@click.option('--database-password',default='ByvI)Sr_uamaPx$w&Xp_LoB*DVBzTO+3oK{Z_Nw4SRcxut?-B>h]&WD}_mU!AgOm')
 @click.option('--flow-dir',default='./test_flows')
 @click.option('--temp-env-store',default='./tmp_verions')
 @click.option('--database-name',default='metaflow')

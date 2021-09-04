@@ -168,12 +168,8 @@ class DockerTestEnvironment:
 
     def _mdcontainer_env_vars(self):
         ip_addr = None
-        for container in self._network.containers:
-            print("checking Container ",container)
-            if container.id == self._database_container.id:
-                ip_addr = self._resolve_ipaddr(self._database_container)
-                self._logger(f'Using DB Ip Address {ip_addr} ',fg='gree')
-                break
+        ip_addr = self._resolve_ipaddr(self._database_container)
+        self._logger(f'Using DB Ip Address {ip_addr} ',fg='gree')
         return dict(
             MF_METADATA_DB_HOST = ip_addr,
             MF_METADATA_DB_PORT = self._database_port,

@@ -205,10 +205,6 @@ class FlowInstanceTest(Process):
         self.logger_name = logger_name
         self.logger = create_logger(logger_name)
     
-    def _init_logging(self):
-        import sys
-        sys.stdout = open(str(os.getpid()) + ".out", "a", buffering=1)
-        sys.stderr = open(str(os.getpid()) + "_error.out", "a", buffering=1)
     
     def metadata(self):
         import json
@@ -222,7 +218,6 @@ class FlowInstanceTest(Process):
     def run(self):
         """run 
         """
-        self._init_logging()
         print("Starting Test")
         print(self.metadata())
         with TestEnvironment(self.version_number,self.temp_dir,self.envionment_config) as env:

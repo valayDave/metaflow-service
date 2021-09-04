@@ -212,7 +212,7 @@ class DockerTestEnvironment:
         time.sleep(10)
         self._logger('Creating Metadata Service Container',fg='blue')
         # Create the metadata service container
-        self._metadataservice_container = self._docker.containers.run(self._image_name,\
+        self._metadataservice_container = self._docker.containers.run('netflixoss/metaflow_metadata_service',\
                                                     detach=True,\
                                                     environment=self._mdcontainer_env_vars(),\
                                                     network=self._network_name,\

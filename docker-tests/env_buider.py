@@ -214,6 +214,8 @@ class DockerTestEnvironment:
         # Create the metadata service container
         self._metadataservice_container = self._docker.containers.run('netflixoss/metaflow_metadata_service',\
                                                     detach=True,\
+                                                    stdin_open=True,\
+                                                    tty=True,\
                                                     environment=self._mdcontainer_env_vars(),\
                                                     network=self._network_name,\
                                                     ports=self._mdservice_ports(),\

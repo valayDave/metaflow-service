@@ -144,7 +144,6 @@ class TestEnvironment:
        
 
     def _get_runid(self,run_response):
-        print(run_response.decode('utf-8'))
         lines = run_response.decode('utf-8').split('\n')
         # print(lines)
         runidstr=lines[5].split(' Workflow starting ')[1]
@@ -219,8 +218,6 @@ class FlowInstanceTest(Process):
     def run(self):
         """run 
         """
-        print("Starting Test")
-        print(self.metadata())
         with TestEnvironment(self.version_number,self.temp_dir,self.envionment_config) as env:
             test_res_data = []
             for file in self.flow_files:

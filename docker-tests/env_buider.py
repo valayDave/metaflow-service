@@ -3,7 +3,10 @@ import docker
 import click
 from docker.errors import BuildError, NotFound, APIError
 import time
-from versioned_tests import EnvConfig,MFTestRunner
+import traceback
+
+from docker.models.containers import Container
+from versioned_tests import EnvConfig,MFTestRunner,METAFLOW_VERSIONS
 POSTGRES_IMAGE = 'postgres:9-alpine'
 import os 
 class IpNotResolved(Exception):
@@ -36,6 +39,8 @@ class DockerTestEnvironment:
     """
 
     def __init__(self,\
+                versions = METAFLOW_VERSIONS,\
+                flow_dir = './test_flows',\
                 max_ip_wait_time = 20,\
                 database_name='metaflow',
                 database_password='password',
@@ -71,19 +76,39 @@ class DockerTestEnvironment:
         self._metadata_image = None
         self._image_build_path = image_build_path
         self._metadataservice_name = 'testharness-metadataservice'
+
+        # Local Test Harness Related Configuration
+        self._flow_dir = flow_dir
+        self._mf_versions = versions
     
     def lifecycle(self):
         # Create the network and the image. 
         self._logger('Creating New Environment',fg='green')
         self._create_enivornment()
-        self._logger('Environment Created, Now Running Tests',fg='green')
-        self._run_tests()
-        self._logger('Completed Tests, Tearing down environment',fg='green')
-        self._teardown_environment()
-        self._logger('Finished Running Test ! Wohoo!',fg='green')
+        try:
+            self._logger('Environment Created, Now Running Tests',fg='green')
+            self._run_tests()
+            self._logger('Finished Running Test ! Wohoo!',fg='green')
+        except Exception as e:
+            error_string = traceback.format_exc()
+            self._logger(f'Something Failed ! {error_string}',fg='red')
+        finally:
+            self._logger("Tearing down environment",fg='green')
+            self._teardown_environment()
+        
         
     def _run_tests(self):
-        pass
+        url = f"http://localhost:8080/api"
+        test_runner = MFTestRunner(
+            self._flow_dir,
+            EnvConfig(
+                datastore='local',
+                metadata='service',
+                metadata_url=url
+            ),
+            versions=self._mf_versions,
+        )
+        test_runner.run_tests()
 
     def _teardown_environment(self):
         container_set = [
@@ -116,23 +141,29 @@ class DockerTestEnvironment:
             POSTGRES_PASSWORD=self._database_user,
         )
     
-    def _resolve_db_ipaddr(self):
+    def _resolve_ipaddr(self,container:Container,wait_time=None):
         # Wait for 20 seconds until the IP addr of the 
         # database container is available
-        for i in range(self._max_ip_wait_time):
-            ipaddr = self._database_container.attrs['Networks']['IPAddress']
+        wait_time = wait_time if wait_time is not None else self._max_ip_wait_time
+        for i in range(wait_time):
+            try:
+                ipaddr = container.attrs['Networks']['IPAddress']
+            except KeyError:
+                ipaddr = ''
+
             if ipaddr == '':
-                self._database_container.reload()
+                self._logger(f"Couldn't resolve IP Address for container {container.name} of image {container.image.tags}. Waiting for {wait_time-i} seconds",fg='red')
+                container.reload()
             else:
                 return ipaddr
             time.sleep(1)
-        raise IpNotResolved(container_name=self._database_container.name)
+        raise IpNotResolved(container_name=container.name,container_id=container.id)
 
     def _mdcontainer_env_vars(self):
         ip_addr = None
         for container in self._network.containers:
             if container.id == self._database_container.id:
-                ip_addr = self._resolve_db_ipaddr()
+                ip_addr = self._resolve_ipaddr(self._database_container)
 
         return dict(
             MF_METADATA_DB_HOST = ip_addr,
@@ -172,6 +203,7 @@ class DockerTestEnvironment:
         self._metadataservice_container = self._docker.containers.run(self._image_name,\
                                                     detach=True,\
                                                     environment=self._mdcontainer_env_vars(),\
+                                                    network=self._network_name,\
                                                     ports=self._mdservice_ports(),\
                                                     )
         

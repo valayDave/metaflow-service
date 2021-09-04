@@ -197,17 +197,34 @@ class TestEnvironment:
 class FlowInstanceTest(Process):
     # this should use the TestEnvironment and run the actual test
     def __init__(self,version_number,flow_files,temp_dir,envionment_config) -> None:
-        Process.__init__(self,daemon=False) # Making it a deamon process. 
+        Process.__init__(self,daemon=False,) # Making it a deamon process. 
         self.version_number,self.flow_files = version_number,flow_files
         self.temp_dir=temp_dir
         self.envionment_config = envionment_config
         logger_name = f'FlowInstanceTest-{TestEnvironment.session_id_hash(version_number)}-{version_number}'
         self.logger_name = logger_name
         self.logger = create_logger(logger_name)
+    
+    def _init_logging(self):
+        import sys
+        sys.stdout = open(str(os.getpid()) + ".out", "a", buffering=0)
+        sys.stderr = open(str(os.getpid()) + "_error.out", "a", buffering=0)
+    
+    def metadata(self):
+        import json
+        return f"""
+        Metaflow Version : {self.version_number}
+        Configuration Variables: 
+        
+        {json.dumps(self.envionment_config.get_env(),indent=4)}
+        """
 
     def run(self):
         """run 
         """
+        self._init_logging()
+        print("Starting Test")
+        print(self.metadata())
         with TestEnvironment(self.version_number,self.temp_dir,self.envionment_config) as env:
             test_res_data = []
             for file in self.flow_files:

@@ -8,7 +8,7 @@ import venv
 import shutil
 import subprocess 
 from multiprocessing import Process
-
+from joblib import Parallel,delayed
 import logging
 import click
 import time
@@ -282,9 +282,7 @@ class MFTestRunner:
         # create a session Id for each test
         # Make a virtual environment in the same name in temp dir
         tests = self._make_tests()
-        processes = []
-        pool = multiprocessing.Pool(processes=self._max_concurrent_tests)
-        response = pool.starmap(run_test,tests)
+        response  = Parallel(n_jobs=8)(delayed(run_test)(*test) for test in tests)
         results = []
         for p in response:
             results.extend(load_json(p))

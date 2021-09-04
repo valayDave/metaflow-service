@@ -98,7 +98,7 @@ class DockerTestEnvironment:
         
         
     def _run_tests(self):
-        url = f"http://localhost:8080/api"
+        url = f"http://localhost:8080/"
         test_runner = MFTestRunner(
             self._flow_dir,
             EnvConfig(

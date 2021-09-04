@@ -144,8 +144,8 @@ class DockerTestEnvironment:
     
     def _db_env_vars(self):
         return dict(
-            POSTGRES_USER=self._database_password,
-            POSTGRES_PASSWORD=self._database_user,
+            POSTGRES_USER=self._database_user,
+            POSTGRES_PASSWORD=self._database_password ,
             POSTGRES_DB=self._database_name
         )
     

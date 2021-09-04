@@ -154,7 +154,7 @@ class DockerTestEnvironment:
         wait_time = wait_time if wait_time is not None else self._max_ip_wait_time
         for i in range(wait_time):
             try:
-                ipaddr = container.attrs['Networks']['IPAddress']
+                ipaddr = container.attrs['NetworkSettings']['Networks'][self._network_name]['IPAddress']
             except KeyError:
                 ipaddr = ''
 

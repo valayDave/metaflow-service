@@ -112,7 +112,14 @@ class DockerTestEnvironment:
             versions=self._mf_versions,
             temp_env_store=self._temp_env_store,
         )
-        test_runner.run_tests()
+        test_results = test_runner.run_tests()
+        for res in test_results:
+            message = f"Successfull executed flow {res['flow']}/{res['run']} with Metaflow version {res['version']}"
+            fg='green'
+            if not res['success']:
+                message = f"Failed in executing flow {res['flow']}/{res['run']} with Metaflow version {res['version']}"
+                fg='red'
+            self._logger(message,fg=fg)
 
     def _teardown_environment(self):
         container_set = [

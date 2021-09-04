@@ -17,6 +17,9 @@ WORKFLOW_EXTRACT_REGEX = re.compile('\(run-id (?P<runid>[a-zA-Z0-9_-]+)',re.IGNO
 FLOW_EXTRACTOR_REGEX = re.compile('^(\S+) (\S+) (\S+) (?P<flow>[A-Za-z0-9_]+) (\S+) (\S+)',re.IGNORECASE)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+def load_json(pth):
+    with open(pth,'r') as f:
+        return json.load(f)
 
 def save_json(data,pth):
     with open(pth,'w') as f:
@@ -203,11 +206,15 @@ class FlowInstanceTest(Process):
         Process.__init__(self,daemon=False,) # Making it a deamon process. 
         self.version_number,self.flow_files = version_number,flow_files
         self.temp_dir=temp_dir
+        self._version = version_number
         self.envionment_config = envionment_config
-        logger_name = f'FlowInstanceTest-{TestEnvironment.session_id_hash(version_number)}-{version_number}'
+        logger_name = self.get_logger_name(version_number)
         self.logger_name = logger_name
         self.logger = create_logger(logger_name)
     
+    @property
+    def saved_file_name(self):
+        return f'FlowInstanceTest-{TestEnvironment.session_id_hash(self._version)}-{self._version}.json'
     
     def metadata(self):
         import json
@@ -232,9 +239,9 @@ class FlowInstanceTest(Process):
                 test_res_data.append(env_info)
                 # Todo : Create script to manipulate the run flow
                 # todo : Manage Local datastore/metadata
-                self.logger.info(f"Ran Flow File : {file} On Version : {self.version_number}")
-            self.logger.info(f"Saving File : {file} On Version : {self.version_number}")
-            filename =f'{self.logger_name}.json'
+                self.logger.debug(f"Ran Flow File : {file} On Version : {self.version_number}")
+            self.logger.debug(f"Saving File : {file} On Version : {self.version_number}")
+            filename = self.saved_file_name
             save_json(test_res_data,filename)
 
         
@@ -280,7 +287,12 @@ class MFTestRunner:
         
         for p in processes:
             p.join()
+        
+        results = []
+        for p in processes:
+            results.append(load_json(p.saved_file_name))
         shutil.rmtree(self.temp_env_store)
+        return results
 
 
 # def run_tests():

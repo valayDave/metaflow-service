@@ -288,8 +288,8 @@ class MFTestRunner:
             try:
                 p = run_test(*test)
                 results.extend(load_json(p))
-            except:
-                pass
+            except Exception as e:
+                print(e)
         shutil.rmtree(self.temp_env_store)
         return results
 

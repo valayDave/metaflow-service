@@ -216,7 +216,7 @@ class FlowInstanceTest(Process):
     
     @property
     def saved_file_name(self):
-        return f'FlowInstanceTest-{TestEnvironment.session_id_hash(self._version)}-{self._version}.json'
+        return f'{self.logger_name}.json'
     
     def metadata(self):
         import json

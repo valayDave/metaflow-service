@@ -256,7 +256,8 @@ class DockerTestEnvironment:
 
 def run_tests():
     test_runner = DockerTestEnvironment(
-        logger=click.secho
+        logger=click.secho,
+        database_password="kkkkkksssss$asfsfasdfas&*safa>h]&WD}_mU!AgOm"
     )
     test_runner.lifecycle()
 

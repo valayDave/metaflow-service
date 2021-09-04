@@ -1,5 +1,5 @@
 aiohttp
 aiohttp-swagger
-psycopg2
+psycopg2==2.8.6
 boto3
 aiopg

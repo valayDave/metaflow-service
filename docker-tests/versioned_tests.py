@@ -247,7 +247,6 @@ class FlowInstanceTest(Process):
             self.logger.debug(f"Saving File : {file} On Version : {self.version_number}")
             filename = self.saved_file_name
             save_json(test_res_data,filename)
-            return filename
 
         
 
@@ -285,15 +284,18 @@ class MFTestRunner:
         # Make a virtual environment in the same name in temp dir
         tests = self._make_tests()
         processes = []
-        pool = multiprocessing.Pool(processes=self._max_concurrent_tests)
-        response = pool.map_async(
-            FlowInstanceTest,tests,
-        )
-        response.wait()
+        for test in tests:
+            process = FlowInstanceTest(*test)
+            process.start()
+            processes.append(process)
+            time.sleep(10)
+        
+        for p in processes:
+            p.join()
+        
         results = []
-        for p in response.get():
-            print(p)
-            results.extend(p)
+        for p in processes:
+            results.extend(load_json(p.saved_file_name))
         shutil.rmtree(self.temp_env_store)
         return results
 

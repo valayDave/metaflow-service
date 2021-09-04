@@ -1,5 +1,6 @@
 # This is the a test runner for various metaflow versions. It will run test cases with different versions of the metaflow clients. 
 # Very barebone; Needs polishing to make it very efficient and customizable. 
+import multiprocessing
 import os
 import glob
 from sys import version
@@ -246,6 +247,7 @@ class FlowInstanceTest(Process):
             self.logger.debug(f"Saving File : {file} On Version : {self.version_number}")
             filename = self.saved_file_name
             save_json(test_res_data,filename)
+            return filename
 
         
 
@@ -265,6 +267,7 @@ class MFTestRunner:
                 temp_env_store='./tmp_verions') -> None:
         self.flow_files = glob.glob(os.path.join(flow_dir,"*_testflow.py"))
         self.versions = versions
+        self._max_concurrent_tests = max_concurrent_tests
         self.envionment_config = envionment_config
         # Todo : figure test concurrency
         # todo assert versions are the same as `METAFLOW_VERSIONS`
@@ -282,18 +285,13 @@ class MFTestRunner:
         # Make a virtual environment in the same name in temp dir
         tests = self._make_tests()
         processes = []
-        for test in tests:
-            process = FlowInstanceTest(*test)
-            process.start()
-            processes.append(process)
-            time.sleep(10)
-        
-        for p in processes:
-            p.join()
-        
+        pool = multiprocessing.Pool(processes=self._max_concurrent_tests)
+        response = pool.map_async(
+            FlowInstanceTest,tests,
+        )    
         results = []
-        for p in processes:
-            results.extend(load_json(p.saved_file_name))
+        for p in response:
+            results.extend(p)
         shutil.rmtree(self.temp_env_store)
         return results
 

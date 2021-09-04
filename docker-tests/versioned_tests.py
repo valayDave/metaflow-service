@@ -144,6 +144,7 @@ class TestEnvironment:
        
 
     def _get_runid(self,run_response):
+        print(run_response)
         lines = run_response.decode('utf-8').split('\n')
         # print(lines)
         runidstr=lines[5].split(' Workflow starting ')[1]

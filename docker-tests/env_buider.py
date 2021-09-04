@@ -208,6 +208,7 @@ class DockerTestEnvironment:
                                             environment=self._db_env_vars(),\
                                             network=self._network_name,)
         
+        time.sleep(10)
         self._logger('Creating Metadata Service Container',fg='blue')
         # Create the metadata service container
         self._metadataservice_container = self._docker.containers.run(self._image_name,\
@@ -217,6 +218,7 @@ class DockerTestEnvironment:
                                                     ports=self._mdservice_ports(),\
                                                     )
         
+        time.sleep(40)
     
     def _build_mdservice_image(self):
         image,log_generator = self._docker.images.build(path=self._image_build_path,\

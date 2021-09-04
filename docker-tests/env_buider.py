@@ -143,11 +143,8 @@ class DockerTestEnvironment:
         try: 
             os.stat(self._temp_env_store)
             is_present = True
-        except OSError as e:
-            if e.errno == 17:
-                pass
-            else:
-                raise
+        except FileNotFoundError as e:
+            pass
         if is_present:
             shutil.rmtree(self._temp_env_store)
         

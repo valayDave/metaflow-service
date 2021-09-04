@@ -288,9 +288,11 @@ class MFTestRunner:
         pool = multiprocessing.Pool(processes=self._max_concurrent_tests)
         response = pool.map_async(
             FlowInstanceTest,tests,
-        )    
+        )
+        response.wait()
         results = []
-        for p in response:
+        for p in response.get():
+            print(p)
             results.extend(p)
         shutil.rmtree(self.temp_env_store)
         return results

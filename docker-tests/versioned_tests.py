@@ -286,7 +286,7 @@ class MFTestRunner:
             process = FlowInstanceTest(*test)
             process.start()
             processes.append(process)
-            time.sleep(1)
+            time.sleep(10)
         
         for p in processes:
             p.join()

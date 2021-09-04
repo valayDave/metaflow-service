@@ -139,7 +139,17 @@ class DockerTestEnvironment:
         self._docker.images.remove(self._metadata_image.id)
         
         # remove temporary directory of MF versions
-        shutil.rmtree(self._temp_env_store)
+        is_present = False
+        try: 
+            os.stat(self._temp_env_store)
+            is_present = True
+        except OSError as e:
+            if e.errno == 17:
+                pass
+            else:
+                raise
+        if is_present:
+            shutil.rmtree(self._temp_env_store)
         
     
     def _db_env_vars(self):

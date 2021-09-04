@@ -185,6 +185,10 @@ class DockerTestEnvironment:
             '8082/tcp':8082,
             '8080/tcp':8080,
         }
+    def _db_ports(self):
+        return {
+            f'{self._database_port}/tcp':self._database_port,
+        }
 
     def _create_enivornment(self):
         self._logger('Creating a network',fg='blue')
@@ -201,6 +205,7 @@ class DockerTestEnvironment:
         # Create the Postgres container
         self._database_container = self._docker.containers.run(POSTGRES_IMAGE,\
                                             detach=True,\
+                                            ports=self._db_ports(),\
                                             name=self._database_container_name,\
                                             environment=self._db_env_vars(),\
                                             network=self._network_name,)

@@ -1,4 +1,4 @@
 aiohttp
 aiohttp-swagger
 psycopg2==2.8.6
-aiopg
+aiopg==1.2.1

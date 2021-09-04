@@ -260,7 +260,7 @@ class MFTestRunner:
     def __init__(self,\
                 flow_dir,\
                 envionment_config:EnvConfig,
-                max_concurrent_tests= 4,\
+                max_concurrent_tests= 2,\
                 versions=METAFLOW_VERSIONS,\
                 temp_env_store='./tmp_verions') -> None:
         self.flow_files = glob.glob(os.path.join(flow_dir,"*_testflow.py"))
@@ -282,7 +282,7 @@ class MFTestRunner:
         # create a session Id for each test
         # Make a virtual environment in the same name in temp dir
         tests = self._make_tests()
-        response  = Parallel(n_jobs=8)(delayed(run_test)(*test) for test in tests)
+        response  = Parallel(n_jobs=self._max_concurrent_tests)(delayed(run_test)(*test) for test in tests)
         results = []
         for p in response:
             results.extend(load_json(p))

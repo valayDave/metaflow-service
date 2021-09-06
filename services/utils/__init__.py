@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from aiohttp import web
 from typing import Dict
 import logging
-import psycopg2.extensions.make_dsn as make_dsn
+import psycopg2
 
 # The latest commit hash of the repository, if set as an environment variable.
 
@@ -121,7 +121,7 @@ class DBConfiguration(object):
 
     @property
     def dsn(self):
-        return self._dsn or make_dsn(
+        return self._dsn if self._dsn is not None else psycopg2.extensions.make_dsn(
             "dbname={0} user={1} host={3} port={4}".format(
             self.database_name, self.user, self.host, self.port),
             password = self.password

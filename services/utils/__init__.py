@@ -125,7 +125,7 @@ class DBConfiguration(object):
     @property
     def dsn(self):
         return self._dsn if self._dsn is not None else psycopg2.extensions.make_dsn(
-            "dbname={0} user={1} host={3} port={4}".format(
+            "dbname={0} user={1} host={2} port={3}".format(
             self.database_name, self.user, self.host, self.port),
             password = self._password
         )

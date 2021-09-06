@@ -1,4 +1,4 @@
-from env_buider import DockerTestEnvironment
+from env_buider import DockerTestEnvironment,METAFLOW_VERSIONS
 import click
 import os
 
@@ -9,12 +9,14 @@ import os
 @click.option('--database-name',default='metaflow')
 @click.option('--database-user',default='metaflow')
 @click.option('--database-port',default=5432)
+@click.option('--versions',default=','.join(METAFLOW_VERSIONS))
 @click.option('--image-build-path',default='../')
 @click.option('--docker-file-path',default=os.path.abspath('../Dockerfile'))
 def run_tests(database_password=None, \
             flow_dir='./test_flows', \
             temp_env_store='./tmp_verions', \
             database_name='metaflow', \
+            versions=None,\
             database_user='metaflow', \
             database_port=5432, 
             image_build_path='../', 
@@ -23,6 +25,7 @@ def run_tests(database_password=None, \
         logger=click.secho,
         database_password=database_password,\
         flow_dir = flow_dir,\
+        versions=versions.split(','),
         temp_env_store = temp_env_store,\
         database_name = database_name,\
         database_user = database_user,\

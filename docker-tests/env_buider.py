@@ -158,6 +158,7 @@ class DockerTestEnvironment:
             pass
         if is_present:
             shutil.rmtree(self._temp_env_store)
+        shutil.rmtree('.metaflow')
         
     
     def _db_env_vars(self):
@@ -208,6 +209,13 @@ class DockerTestEnvironment:
         }
 
     def _create_enivornment(self):
+        try:
+            # If .metaflow is found then remove it 
+            # this is done for fresh tests not conflicting with old tests
+            os.stat('.metaflow')
+            shutil.rmtree('.metaflow')
+        except FileNotFoundError:
+            pass
         self._logger('Creating a network',fg='blue')
         self._network = self._find_network()
         

@@ -75,6 +75,7 @@ def format_baseurl(request: web.BaseRequest):
 #   3. Env connection arguments (MF_METADATA_DB_HOST="..." MF_METADATA_DB...)
 #   4. Default connection arguments (DBConfiguration(host="..."))
 #
+ 
 class DBConfiguration(object):
     host: str = None
     port: int = None
@@ -111,6 +112,8 @@ class DBConfiguration(object):
         self.user = os.environ.get(prefix + "USER", user).translate(table)
         self.password = os.environ.get(
             prefix + "PSWD", password).translate(table)
+        self._password = os.environ.get(
+            prefix + "PSWD", password)
         self.database_name = os.environ.get(
             prefix + "NAME", database_name).translate(table)
 
@@ -124,5 +127,5 @@ class DBConfiguration(object):
         return self._dsn if self._dsn is not None else psycopg2.extensions.make_dsn(
             "dbname={0} user={1} host={3} port={4}".format(
             self.database_name, self.user, self.host, self.port),
-            password = self.password
+            password = self._password
         )

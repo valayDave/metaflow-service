@@ -148,6 +148,7 @@ class TestEnvironment:
        
 
     def _get_runid(self,run_response):
+        # Todo Improve ways to get the runID's
         lines = run_response.decode('utf-8').split('\n')
         # print(lines)
         flow,runid=None,None

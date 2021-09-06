@@ -49,6 +49,7 @@ class DockerTestEnvironment:
                 database_user='metaflow',
                 database_port = 5432,
                 logger=None,
+                with_md_logs = True,
                 image_name = 'metaflow_metadata_service',
                 network_name='postgres-network',\
                 image_build_path='../',\
@@ -57,7 +58,7 @@ class DockerTestEnvironment:
         self._docker = docker.DockerClient(base_url='unix://var/run/docker.sock')
 
         self._logger = logger if logger is not None else lambda *args:print(*args)
-        
+        self._with_md_logs = with_md_logs
         # Network Related Properties
         self._network = None
         self._network_name = network_name
@@ -127,6 +128,9 @@ class DockerTestEnvironment:
             self._database_container
         ]
         self._logger('Stopping all containers',fg='blue')
+        if self._with_md_logs:
+            md_logs = str(self._metadataservice_container.logs())
+            self._logger(f'Metadata Logs ::  \n {md_logs}',fg='blue')
         # first stop all containers
         for container in container_set:
             container.stop(timeout=10)

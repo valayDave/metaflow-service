@@ -5,6 +5,7 @@ import os
 @click.command()
 @click.option('--database-password',default='ByvI)Sr_uamaPx$w&Xp_LoB*DVBzTO+3oK{Z_Nw4SRcxut?-B>h]&WD}_mU!AgOm')
 @click.option('--flow-dir',default='./test_flows')
+@click.option('--with-md-logs',is_flag=True)
 @click.option('--temp-env-store',default='./tmp_verions')
 @click.option('--database-name',default='metaflow')
 @click.option('--database-user',default='metaflow')
@@ -17,6 +18,7 @@ def run_tests(database_password=None, \
             temp_env_store='./tmp_verions', \
             database_name='metaflow', \
             versions=None,\
+            with_md_logs = False,\
             database_user='metaflow', \
             database_port=5432, 
             image_build_path='../', 
@@ -25,6 +27,7 @@ def run_tests(database_password=None, \
         logger=click.secho,
         database_password=database_password,\
         flow_dir = flow_dir,\
+        with_md_logs=  with_md_logs,\
         versions=versions.split(','),
         temp_env_store = temp_env_store,\
         database_name = database_name,\

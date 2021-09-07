@@ -1,6 +1,6 @@
 FROM golang:1.16.3
 
-RUN go get -u github.com/pressly/goose/cmd/goose@v2.7.0-rc3
+RUN go get -u github.com/pressly/goose/cmd/goose
 
 RUN apt-get update && apt-get -y install python3.7 && apt-get -y install python3-pip && apt-get -y install libpq-dev
 

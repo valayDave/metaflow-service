@@ -29,7 +29,6 @@ class ApiUtils(object):
             database_name, user, password, host,
             port, "version"
         )
-        print('goose_template',goose_version_cmd)
 
         p = Popen(goose_version_cmd, stdout=PIPE, stderr=PIPE, shell=True,
                   close_fds=True)

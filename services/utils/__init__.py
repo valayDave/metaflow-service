@@ -91,7 +91,6 @@ class DBConfiguration(object):
     timeout: int = None  # aiopg default: 60 (seconds)
 
     _dsn: str = None
-
     def __init__(self,
                  dsn: str = None,
                  host: str = "localhost",
@@ -103,29 +102,59 @@ class DBConfiguration(object):
                  pool_min: int = 1,
                  pool_max: int = 10,
                  timeout: int = 60):
-        table = str.maketrans({"'": "\'", "`": r"\`"})
 
         self._dsn = os.environ.get(prefix + "DSN", dsn)
-
-        self.host = os.environ.get(prefix + "HOST", host).translate(table)
-        self.port = int(os.environ.get(prefix + "PORT", port))
-        self.user = os.environ.get(prefix + "USER", user).translate(table)
-        self.password = os.environ.get(
-            prefix + "PSWD", password).translate(table)
-        self._password = os.environ.get(
-            prefix + "PSWD", password)
-        self.database_name = os.environ.get(
-            prefix + "NAME", database_name).translate(table)
+        # We explicitly check the validity of the DSN string 
+        # to avoid issues caused by bad DSN strings. 
+        if not self._is_valid_dsn(self._dsn):
+            self._dsn = None
+        self._host = os.environ.get(prefix + "HOST", host)
+        self._port = int(os.environ.get(prefix + "PORT", port))
+        self._user = os.environ.get(prefix + "USER", user)
+        self._password = os.environ.get(prefix + "PSWD", password)
+        self._database_name = os.environ.get(prefix + "NAME", database_name)
 
         self.pool_min = int(os.environ.get(prefix + "POOL_MIN", pool_min))
         self.pool_max = int(os.environ.get(prefix + "POOL_MAX", pool_max))
 
         self.timeout = int(os.environ.get(prefix + "TIMEOUT", timeout))
+    
+    @staticmethod
+    def _is_valid_dsn(dsn):
+        if dsn is None:
+            return False
+        try:
+            psycopg2.extensions.parse_dsn(dsn)
+            return True
+        except psycopg2.ProgrammingError: 
+            # This means that the DSN is unparsable. 
+            return False
 
     @property
     def dsn(self):
-        return self._dsn if self._dsn is not None else psycopg2.extensions.make_dsn(
-            "dbname={0} user={1} host={2} port={3}".format(
-            self.database_name, self.user, self.host, self.port),
-            password = self._password
-        )
+        if self._dsn is None:
+            return psycopg2.extensions.make_dsn(
+                dbname=self._database_name ,
+                user=self._user,
+                host=self._host, 
+                port=self._port,
+                password=self._password
+            )
+        else:
+            return self._dsn
+
+    @property
+    def password(self):
+        return self._password
+    
+    @property
+    def user(self):
+        return self._user
+    
+    @property
+    def database_name(self):
+        return self._database_name
+    
+    @property
+    def host(self):
+        return self._host

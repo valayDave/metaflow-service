@@ -47,6 +47,7 @@ class DockerTestEnvironment:
                 database_name='metaflow',
                 database_password='password',
                 database_user='metaflow',
+                dont_remove_containers=False,
                 database_port = 5432,
                 logger=None,
                 with_md_logs = True,
@@ -59,6 +60,7 @@ class DockerTestEnvironment:
 
         self._logger = logger if logger is not None else lambda *args:print(*args)
         self._with_md_logs = with_md_logs
+        self._dont_remove_containers = dont_remove_containers
         # Network Related Properties
         self._network = None
         self._network_name = network_name
@@ -131,34 +133,37 @@ class DockerTestEnvironment:
         if self._with_md_logs:
             md_logs = str(self._metadataservice_container.logs().decode('utf-8'))
             self._logger(f'Metadata Logs ::  \n {md_logs}',fg='blue')
-        # first stop all containers
-        for container in container_set:
-            container.stop(timeout=10)
-            container.reload()
         
-        self._logger('Removing all containers',fg='blue')
-        # Then remove all the containers
-        for container in container_set:
-            container.remove()
-        
-        self._logger('Removing Network',fg='blue')
-        # Remove the network 
-        self._network.remove()
+        # If we set an arg not remove containers. 
+        if not self._dont_remove_containers :
+            # first stop all containers
+            for container in container_set:
+                container.stop(timeout=10)
+                container.reload()
+            
+            self._logger('Removing all containers',fg='blue')
+            # Then remove all the containers
+            for container in container_set:
+                container.remove()
+            
+            self._logger('Removing Network',fg='blue')
+            # Remove the network 
+            self._network.remove()
 
-        self._logger('Removing Docker Images',fg='blue')
-        # remove the images.
-        self._docker.images.remove(self._metadata_image.id)
+            self._logger('Removing Docker Images',fg='blue')
+            # remove the images.
+            self._docker.images.remove(self._metadata_image.id)
         
-        # remove temporary directory of MF versions
-        is_present = False
-        try: 
-            os.stat(self._temp_env_store)
-            is_present = True
-        except FileNotFoundError as e:
-            pass
-        if is_present:
-            shutil.rmtree(self._temp_env_store)
-        shutil.rmtree('.metaflow')
+            # remove temporary directory of MF versions
+            is_present = False
+            try: 
+                os.stat(self._temp_env_store)
+                is_present = True
+            except FileNotFoundError as e:
+                pass
+            if is_present:
+                shutil.rmtree(self._temp_env_store)
+            shutil.rmtree('.metaflow')
         
     
     def _db_env_vars(self):

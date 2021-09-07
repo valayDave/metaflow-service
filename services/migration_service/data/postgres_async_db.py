@@ -36,7 +36,6 @@ class AsyncPostgresDB(object):
     async def _init(self, db_conf: DBConfiguration):
         # todo make poolsize min and max configurable as well as timeout
         # todo add retry and better error message
-        print("Initializing Database Conn")
         retries = 3
         for i in range(retries):
             try:

@@ -1,5 +1,5 @@
-psycopg2==2.8.6
+aiohttp
+aiohttp-swagger
+psycopg2
 boto3
-aiohttp==3.7.4.post0
-aiohttp-swagger==1.0.15
-aiopg==1.2.1
+aiopg

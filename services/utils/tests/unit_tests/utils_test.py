@@ -56,9 +56,7 @@ def test_db_conf():
 
 def test_db_conf_dsn():
     with set_env():
-        # todo : THIS TEST SHOULD CHANGE; We should 
-        # have a valid DSN string here otherwise the code will set it as none
-        assert DBConfiguration(dsn='foo').dsn == 'foo'
+        assert DBConfiguration(dsn='user=foo').dsn == 'user=foo'
 
 
 def test_db_conf_arguments():

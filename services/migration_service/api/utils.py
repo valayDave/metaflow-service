@@ -62,7 +62,6 @@ class ApiUtils(object):
                 database_name, user, password, host, port,
                 "up"
             )
-            print('goose_template',goose_version_cmd)
             p = Popen(goose_version_cmd, shell=True,
                       close_fds=True)
             p.wait()

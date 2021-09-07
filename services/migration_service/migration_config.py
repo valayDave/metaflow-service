@@ -9,4 +9,3 @@ port = db_conf.port
 user = shlex.quote(db_conf.user)
 password = shlex.quote(db_conf.password)
 database_name = db_conf.database_name
-print(f"settig Migration coonfig {host},{database_name},{port}")

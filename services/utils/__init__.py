@@ -113,6 +113,7 @@ class DBConfiguration(object):
         self._user = os.environ.get(prefix + "USER", user)
         self._password = os.environ.get(prefix + "PSWD", password)
         self._database_name = os.environ.get(prefix + "NAME", database_name)
+        print(f"settig coonfig {self.host},{self.database_name},{self.port}")
 
         self.pool_min = int(os.environ.get(prefix + "POOL_MIN", pool_min))
         self.pool_max = int(os.environ.get(prefix + "POOL_MAX", pool_max))

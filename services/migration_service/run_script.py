@@ -5,7 +5,7 @@ if __name__ == "__main__":
         my_env = os.environ
         migration_server_process = Popen("PYTHONPATH=/ python3 -m services.migration_service.migration_server", shell=True,
                           close_fds=True, env=my_env)
-
+        print("Started the Migration Server")
         get_env_version = Popen(
             "python3 -m services.migration_service.get_virtual_env",
             shell=True,
@@ -13,15 +13,18 @@ if __name__ == "__main__":
 
         get_env_version.wait()
 
+        print("Extracted the version and Environment")
         # read in version of metadata service to load
         version_value_file = open('/root/services/migration_service/config', 'r')
         version_value = str(version_value_file.read()).strip()
 
+        print("Found Version Value : ",version_value)
         # start proper version of metadata service
         virtual_env_path = '/opt/' + version_value
         my_env['VIRTUAL_ENV'] = '/opt/' + version_value
         path = my_env['PATH']
         my_env['PATH'] = virtual_env_path + "/bin:" + path
+        print("Starting Metadata service ")
         metadata_server_process = Popen(
             "metadata_service", shell=True,
             close_fds=True, env=my_env)

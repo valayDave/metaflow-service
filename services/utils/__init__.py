@@ -133,7 +133,7 @@ class DBConfiguration(object):
     @property
     def connection_string(self):
         # postgresql://[user[:password]@][host][:port][/dbname][?param1=value1&...]
-        return quote(f'postgresql://{self._user}:{self._password}@{self._host}:{self._port}?sslmode=disable')
+        return f'postgresql://{quote(self._user)}:{quote(self._password)}@{self._host}:{self._port}?sslmode=disable'
 
     @property
     def dsn(self):

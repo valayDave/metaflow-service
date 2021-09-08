@@ -3,7 +3,7 @@ import click
 import os
 
 @click.command()
-@click.option('--database-password',default='ByvI)Sr_uamaPx$w&Xp_LoB*DVBzTO+3oK{Z_Nw4SRcxut?-B>h]&WD}_mU!AgOm')
+@click.option('--database-password',default="ByvI)Sr_uamaPx$w&Xp_LoB*DVBzTO+3oK{Z_Nw4SRcxut?-B>h]&WD}_mU!AgOm'\"")
 @click.option('--flow-dir',default='./test_flows')
 @click.option('--with-md-logs',is_flag=True)
 @click.option('--dont-remove-containers',is_flag=True)

@@ -51,6 +51,10 @@ METAFLOW_VERSIONS = [
     "2.3.1",
     "2.3.2",
     "2.3.3",
+    "2.3.4",
+    "2.3.5",
+    "2.3.6",
+    "2.4.0",
 ]
 def create_logger(logger_name:str,level=logging.INFO):
     custom_logger = logging.getLogger(logger_name)

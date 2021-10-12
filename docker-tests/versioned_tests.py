@@ -8,7 +8,6 @@ import venv
 import shutil
 import subprocess 
 from multiprocessing import Process
-from joblib import Parallel,delayed
 import logging
 import click
 import time
@@ -89,7 +88,7 @@ class EnvConfig:
             assert self.s3_datastore_root is not None
             assert self.s3_datatools_root is not None
         if self.metadata == 'service':
-            assert self.metadata_url is not None and self.metadata is not 'local'
+            assert self.metadata_url is not None and self.metadata != 'local'
         
     
     def get_env(self):
@@ -101,7 +100,7 @@ class EnvConfig:
             env_dict['METAFLOW_DATASTORE_SYSROOT_S3']= self.s3_datastore_root
             env_dict['METAFLOW_DATATOOLS_S3ROOT']= self.s3_datastore_root
         
-        if self.metadata is 'local':
+        if self.metadata == 'local':
             env_dict['METAFLOW_DEFAULT_METADATA'] = 'local'
         else:
             env_dict['METAFLOW_DEFAULT_METADATA'] = 'service'
@@ -283,7 +282,6 @@ class MFTestRunner:
         # create a session Id for each test
         # Make a virtual environment in the same name in temp dir
         tests = self._make_tests()
-        # response  = Parallel(n_jobs=self._max_concurrent_tests)(delayed(run_test)(*test) for test in tests)
         results = []
         for test in tests:
             try:

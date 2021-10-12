@@ -156,7 +156,7 @@ class TestEnvironment:
         # print(lines)
         flow,runid=None,None
         try:
-            runidstr=lines[5].split(' Workflow starting ')[1]
+            runidstr=run_response.decode('utf-8').split(' Workflow starting ')[1]
             datadict = WORKFLOW_EXTRACT_REGEX.match(runidstr).groupdict()
             runid = datadict['runid']
             flow = FLOW_EXTRACTOR_REGEX.match(lines[0]).groupdict()['flow']

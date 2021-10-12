@@ -2,7 +2,7 @@ import json
 import sys
 import os
 import traceback
-from urllib.parse import urlencode,quote
+from urllib.parse import urlencode, quote
 from aiohttp import web
 from typing import Dict
 import logging
@@ -74,6 +74,8 @@ def format_baseurl(request: web.BaseRequest):
 #   3. Env connection arguments (MF_METADATA_DB_HOST="..." MF_METADATA_DB...)
 #   4. Default connection arguments (DBConfiguration(host="..."))
 #
+
+
  
 class DBConfiguration(object):
     host: str = None
@@ -103,14 +105,37 @@ class DBConfiguration(object):
                  timeout: int = 60):
 
         self._dsn = os.environ.get(prefix + "DSN", dsn)
-        # We explicitly check the validity of the DSN string 
-        # to avoid issues caused by bad DSN strings. 
-        self._is_valid_dsn(self._dsn)
+        # Check if it is a BAD DSN String. 
+        # if bad dsn string set self._dsn as None. 
+        if self._dsn is not None: 
+            if not self._is_valid_dsn(self._dsn):
+                self._dsn = None
         self._host = os.environ.get(prefix + "HOST", host)
         self._port = int(os.environ.get(prefix + "PORT", port))
         self._user = os.environ.get(prefix + "USER", user)
         self._password = os.environ.get(prefix + "PSWD", password)
         self._database_name = os.environ.get(prefix + "NAME", database_name)
+        conn_str_required_values = [
+            self._host,
+            self._port,
+            self._user,
+            self._password,
+            self._database_name
+        ]
+        some_conn_str_values_missing = any(v is None for v in conn_str_required_values)
+        if self._dsn is None and some_conn_str_values_missing:
+            env_values =', '.join([
+                prefix + "HOST",
+                prefix + "PORT",
+                prefix + "USER",
+                prefix + "PSWD",
+                prefix + "NAME",
+            ])
+            dsn_var = prefix + "DSN"
+            raise Exception(
+                f"Some of the environment variables '{env_values}' are not set. "
+                f"Please either set '{env_values}' or {dsn_var}.  "
+            )
 
         self.pool_min = int(os.environ.get(prefix + "POOL_MIN", pool_min))
         self.pool_max = int(os.environ.get(prefix + "POOL_MAX", pool_max))
@@ -119,13 +144,12 @@ class DBConfiguration(object):
     
     @staticmethod
     def _is_valid_dsn(dsn):
-        if dsn is None:
-            raise Exception("Invalid DSN String")
         try:
             psycopg2.extensions.parse_dsn(dsn)
+            return True
         except psycopg2.ProgrammingError: 
             # This means that the DSN is unparsable. 
-            raise Exception("Invalid DSN String")
+            return None
         
     
     @property

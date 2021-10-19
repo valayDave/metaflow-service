@@ -7,9 +7,22 @@ import time
 import traceback
 
 from docker.models.containers import Container
-from versioned_tests import EnvConfig,MFTestRunner,METAFLOW_VERSIONS
-POSTGRES_IMAGE = 'postgres:latest'
+from versioned_tests import EnvConfig,MFTestRunner,METAFLOW_VERSIONS,save_json
 import os 
+
+POSTGRES_IMAGE = 'postgres:latest'
+MD_SERVICE_IMAGE_NAME = 'netflixoss/metaflow_metadata_service'
+METADATA_DOCKER_TAGS = [
+    "1.0.0",
+    "1.0.1",
+    "2.0.0",
+    "2.0.1",
+    "2.0.2",
+    "2.0.3",
+    "2.0.4",
+    "2.0.5",
+    "latest",
+]
 class IpNotResolved(Exception):
     headline = 'IP Address of Container Unresolvable'
     def __init__(self, container_name='',container_id='', lineno=None):
@@ -48,6 +61,8 @@ class DockerTestEnvironment:
                 database_password='password',
                 database_user='metaflow',
                 dont_remove_containers=False,
+                build_md_image=False,
+                md_docker_image = None,
                 database_port = 5432,
                 logger=None,
                 with_md_logs = True,
@@ -73,6 +88,10 @@ class DockerTestEnvironment:
         self._database_user = database_user
         self._database_port = database_port
         self._max_ip_wait_time = max_ip_wait_time
+        
+        # Configuration related to MD Service Image 
+        self._build_md_image = build_md_image
+        self.md_docker_image = md_docker_image
 
         # Configuration related to the containers for the test harness. 
         self._docker_file_path = docker_file_path
@@ -85,15 +104,16 @@ class DockerTestEnvironment:
         # Local Test Harness Related Configuration
         self._flow_dir = flow_dir
         self._mf_versions = versions
-        self._temp_env_store = temp_env_store
+        self._temp_env_store = temp_env_store   
     
     def lifecycle(self):
         # Create the network and the image. 
+        test_results = []
         self._logger('Creating New Environment',fg='green')
         self._create_enivornment()
         try:
             self._logger('Environment Created, Now Running Tests',fg='green')
-            self._run_tests()
+            test_results = self._run_tests()
             self._logger('Finished Running Test ! Wohoo!',fg='green')
         except Exception as e:
             error_string = traceback.format_exc()
@@ -101,6 +121,8 @@ class DockerTestEnvironment:
         finally:
             self._logger("Tearing down environment",fg='green')
             self._teardown_environment()
+        
+        return test_results
         
         
     def _run_tests(self):
@@ -123,6 +145,7 @@ class DockerTestEnvironment:
                 message = f"Failed in executing flow {res['flow']}/{res['run']} with Metaflow version {res['version']}"
                 fg='red'
             self._logger(message,fg=fg)
+        return test_results
 
     def _teardown_environment(self):
         container_set = [
@@ -255,9 +278,13 @@ class DockerTestEnvironment:
         time.sleep(5)
     
     def _build_mdservice_image(self):
-        image,log_generator = self._docker.images.build(path=self._image_build_path,\
+        if self._build_md_image:
+            image,log_generator = self._docker.images.build(path=self._image_build_path,\
                                                         dockerfile=self._docker_file_path,\
                                                         tag=self._image_name,)
+        else:
+            image = self._docker.images.pull(f"{MD_SERVICE_IMAGE_NAME}",tag=self.md_docker_image)
+            self._image_name = f"{MD_SERVICE_IMAGE_NAME}:{self.md_docker_image}"
         return image
     
     def _find_network(self):

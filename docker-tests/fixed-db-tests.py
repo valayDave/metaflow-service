@@ -1,9 +1,9 @@
 """
-This runs a test which sets up one database and the sequentially tests all metaflow versions with all versions of the Metaflow Service docker images available on docker hub.
+This test sets up one database and then sequentially tests all metaflow versions with all versions of the Metadata Service's dockerhub images. It can also build the md service by itself and then test all versions of the metaflow client. 
 
-This test will even run migration before running the tests. 
+As the tests are run sequentially over the same database, it also allows us to run migrations as a part of the tests. These help ensure replication of behaviour based on the break changes introduced by v2.0.0. 
 
-As the tests are run sequentially the database has a log of the runs from older MF service db versions. This makes is easier to find out which db schema versions are compatible. This test will also log the schema versions of the successful tests. 
+These test make it easier to find out which db schema versions are compatible based on which initial service version the user started from. 
 """
 from sequential_test import METAFLOW_VERSIONS, execute_sequential_test
 from env_buider import save_json

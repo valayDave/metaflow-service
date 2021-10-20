@@ -73,7 +73,7 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
 
     def get_tags(self):
         if self.db_version is not None:
-            return super().get_tags().extend([f'db_version:{self.db_version}'])
+            return super().get_tags() + [f'db_version:{self.db_version}']
 
     def destroy_database(self):
         super()._teardown_database()

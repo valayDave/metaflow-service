@@ -79,9 +79,11 @@ class EnvConfig:
                 datastore='local',\
                 s3_datastore_root=None,\
                 s3_datatools_root=None,\
+                tags = [],\
                 metadata='local',\
                 metadata_url=None) -> None:
         self.datastore= datastore
+        self.tags =tags
         self.s3_datastore_root= s3_datastore_root
         self.metadata= metadata
         self.metadata_url= metadata_url
@@ -147,6 +149,10 @@ class TestEnvironment:
         env.update({k: os.environ[k] for k in os.environ if k not in env})
         env.update(self.env_config.get_env())
         env["PYTHONPATH"] = self.python_path
+        if len(self.env_config.tags) > 1:
+            for t in self.env_config.tags:
+                cmd.extend(['--tag',t])
+
         run_response,fail = self._run_command(cmd,env)
         return dict(success=not fail,**self._get_runid(run_response))
        

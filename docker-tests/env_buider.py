@@ -2,6 +2,7 @@ import abc
 from re import L
 import shutil
 import docker
+from docker.errors import APIError
 import click
 from docker.errors import BuildError, NotFound, APIError
 import time
@@ -100,18 +101,37 @@ class DockerTestEnvironment:
         self._metadataservice_container = None
         self._metadata_image = None
         self._image_build_path = image_build_path
+        if self._build_md_image:
+            self._md_repo_version = self._loose_git_version()
+
         self._metadataservice_name = 'testharness-metadataservice'
 
         # Local Test Harness Related Configuration
         self._flow_dir = flow_dir
         self._mf_versions = versions
         self._temp_env_store = temp_env_store
-
-    def _report_test(self):
+    
+    @property
+    def metadataservice_version(self):
         md_version = self.md_docker_image
         if self._build_md_image:
-            md_version = 'HEAD'
+            md_version = f'git:{self._md_repo_version}'
+        
+        return md_version
 
+    def _loose_git_version(self):
+        try:
+            import git
+            repo = git.Repo(search_parent_directories=True)
+            sha = repo.head.object.hexsha
+            branch_name = repo.active_branch.name
+            return f'{branch_name}-{sha}'
+        except ImportError:
+            pass
+        return None
+
+    def _report_test(self):
+        md_version = self.metadataservice_version
         return '\n\t'.join(
             ['Running test with parameters : \n\t']+[
             f"{k} : {v}" for k,v in dict(
@@ -145,6 +165,11 @@ class DockerTestEnvironment:
             self._teardown_environment()
         
         return test_results
+    
+    def get_tags(self):
+        return [
+            f"service_version:{self.metadataservice_version}"
+        ]
         
         
     def _run_tests(self):
@@ -152,6 +177,7 @@ class DockerTestEnvironment:
         test_runner = MFTestRunner(
             self._flow_dir,
             EnvConfig(
+                tags = self.get_tags(),
                 datastore='local',
                 metadata='service',
                 metadata_url=url
@@ -190,7 +216,12 @@ class DockerTestEnvironment:
             if self._build_md_image:
                 self._logger('Removing Docker Images',fg='blue')
                 # remove the images.
-                self._docker.images.remove(self._metadata_image.id)
+                try:
+                    self._docker.images.remove(self._metadata_image.id)
+                except APIError as e:
+                    if e.status_code == 409:
+                        self._logger(f'Unable to delete the Metadata image. \n {e.explanation}',fg='red')
+
         
             # remove temporary directory of MF versions
             is_present = False

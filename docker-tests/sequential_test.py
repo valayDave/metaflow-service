@@ -2,19 +2,20 @@ import json
 import os
 import time
 import requests
-from env_buider import DockerTestEnvironment, METAFLOW_VERSIONS, METADATA_DOCKER_TAGS, POSTGRES_IMAGE 
+from env_buider import DockerTestEnvironment, METAFLOW_VERSIONS, POSTGRES_IMAGE 
 # (version_number, migration_required, use_local)
 METADATA_MIGRATION_VERSIONS = [
     ("1.0.0",False, False),
     ("1.0.1",False, False),
-    ("2.0.0",True, False),
+    ("2.0.0",False, False),
     ("2.0.1",True, False),
     ("2.0.2",True, False),
     ("2.0.3",True, False),
     ("2.0.4",True, False),
     ("2.0.5",True, False),
-    # ("latest",True, False),
-    # (None, True, True),
+    ("2.0.6",True, False),
+    ("latest",True, False),
+    (None, True, True),
 ]
 
 class MigrationFailingException(Exception):
@@ -48,7 +49,7 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
                 docker_file_path=os.path.abspath('../Dockerfile')) -> None:
         self.run_migration = run_migration
         self.migration_response = None
-        self.db_version = 1
+        self.db_version = "0"
         super().__init__(versions=versions, 
                         flow_dir=flow_dir, 
                         temp_env_store=temp_env_store, 
@@ -69,6 +70,10 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
     def _teardown_database(self):
         # Don't do anything to teardown database. 
         pass
+
+    def get_tags(self):
+        if self.db_version is not None:
+            return super().get_tags().extend([f'db_version:{self.db_version}'])
 
     def destroy_database(self):
         super()._teardown_database()
@@ -113,6 +118,8 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
                 self.migration_response = self._check_migrations()
                 self.db_version = self.migration_response['current_version']
                 self._logger(json.dumps(self._check_migrations(),indent=4),fg='yellow')
+                # Restart the container if we run a migration. 
+                self._metadataservice_container.restart(timeout=10)
                 
     def _check_migrations(self):
         """[summary]
@@ -135,23 +142,12 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
         resp = requests.get(schema_status_api)
         if resp.status_code !=200:
             # this Means something Failed. 
-            version = self.md_docker_image
-            if self.md_docker_image is None:
-                version = 'HEAD'
+            version = self.metadataservice_version
             raise MigrationFailingException(md_service_version=version,error=resp.text)
         return resp.json()
     
     def _run_schema_upgrade(self):
         """
-        Migration Service Response:
-
-        {
-            "is_up_to_date": true, 
-            "current_version": "20201002000616", 
-            "migration_in_progress": false, 
-            "db_schema_versions": ["1", "20200603104139", "20201002000616"], 
-            "unapplied_migrations": []
-        }
 
         Raises:
             MigrationFailingException: [when migration service error's out]
@@ -160,9 +156,7 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
         resp = requests.patch(schema_status_api)
         if resp.status_code !=200:
             # this Means something Failed. 
-            version = self.md_docker_image
-            if self.md_docker_image is None:
-                version = 'HEAD'
+            version = self.metadataservice_version
             raise MigrationFailingException(md_service_version=version,error=resp.text)
 
 
@@ -190,9 +184,9 @@ def execute_sequential_test(metadata_config=METADATA_MIGRATION_VERSIONS,**kwargs
             error_stack_trace = None,
             error = None
         )
-        if env.md_docker_image is not None:
-            data_dict['service_version'] = env.md_docker_image
+        
         data_dict['results'] = env.lifecycle()
+        data_dict['service_version'] = env.metadataservice_version
         data_dict['failed'] = env.failed
         data_dict['error_stack_trace'] = env.error_stack_trace
         data_dict['error'] = str(env.error)

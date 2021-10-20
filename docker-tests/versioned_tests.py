@@ -5,6 +5,7 @@ import os
 import glob
 from sys import version
 import venv
+import uuid
 import shutil
 import subprocess 
 from multiprocessing import Process
@@ -210,6 +211,7 @@ class FlowInstanceTest:
     # this should use the TestEnvironment and run the actual test
     def __init__(self,version_number,flow_files,temp_dir,envionment_config) -> None:
         # Process.__init__(self,daemon=False,) # Making it a deamon process. 
+        self.test_id = str(uuid.uuid4())[:4]
         self.version_number,self.flow_files = version_number,flow_files
         self.temp_dir=temp_dir
         self._version = version_number
@@ -218,7 +220,7 @@ class FlowInstanceTest:
     
     @property
     def logger_name(self):
-        return f'FlowInstanceTest-{TestEnvironment.session_id_hash(self._version)}-{self._version}'
+        return f'FlowInstanceTest-{self.test_id}-{self._version}'
     
     @property
     def saved_file_name(self):

@@ -105,19 +105,40 @@ class DockerTestEnvironment:
         # Local Test Harness Related Configuration
         self._flow_dir = flow_dir
         self._mf_versions = versions
-        self._temp_env_store = temp_env_store   
+        self._temp_env_store = temp_env_store
+
+    def _report_test(self):
+        md_version = self.md_docker_image
+        if self._build_md_image:
+            md_version = 'HEAD'
+
+        return '\n\t'.join(
+            ['Running test with parameters : \n\t']+[
+            f"{k} : {v}" for k,v in dict(
+                Metaflow_Versions = ', '.join(self._mf_versions),
+                Metadata_Service_Version = md_version,
+            ).items()
+        ] + ['\n\t'])
+            
     
     def lifecycle(self):
         # Create the network and the image. 
         test_results = []
         self._logger('Creating New Environment',fg='green')
-        self._create_enivornment()
+        self._logger(self._report_test(),fg='green')
+        self.failed = False
+        self.error_stack_trace = None
+        self.error = None
         try:
+            self._create_enivornment()
             self._logger('Environment Created, Now Running Tests',fg='green')
             test_results = self._run_tests()
             self._logger('Finished Running Test ! Wohoo!',fg='green')
         except Exception as e:
             error_string = traceback.format_exc()
+            self.failed = True
+            self.error = e
+            self.error_stack_trace = error_string
             self._logger(f'Something Failed ! {error_string}',fg='red')
         finally:
             self._logger("Tearing down environment",fg='green')
@@ -161,12 +182,13 @@ class DockerTestEnvironment:
             
             self._teardown_database()
             
-            self._logger('Removing Network',fg='blue')
             # Remove the network 
-            self._network.remove()
-            self._logger('Removing Docker Images',fg='blue')
+            if self._database_container is None:
+                self._logger('Removing Network',fg='blue')
+                self._network.remove()
 
             if self._build_md_image:
+                self._logger('Removing Docker Images',fg='blue')
                 # remove the images.
                 self._docker.images.remove(self._metadata_image.id)
         
@@ -179,7 +201,10 @@ class DockerTestEnvironment:
                 pass
             if is_present:
                 shutil.rmtree(self._temp_env_store)
-            shutil.rmtree('.metaflow')
+            try:
+                shutil.rmtree('.metaflow')
+            except FileNotFoundError: 
+                pass
         
     
     def _db_env_vars(self):
@@ -231,7 +256,9 @@ class DockerTestEnvironment:
 
     def _teardown_database(self):
         self._logger('Removing Database related container',fg='blue')
-        self._teardown_container(self._database_container)
+        if self._database_container is not None:
+            self._teardown_container(self._database_container)
+            self._database_container = None
 
     def _teardown_container(self,container):
         container.stop(timeout=10)
@@ -241,6 +268,7 @@ class DockerTestEnvironment:
     def _teardown_metadata_service(self):
         self._logger('Removing MD service related container',fg='blue')
         self._teardown_container(self._metadataservice_container)
+        self._metadataservice_container = None
 
     def _setup_database(self):
         # Create the Postgres container
@@ -308,38 +336,3 @@ class DockerTestEnvironment:
 
     def _create_network(self):
         return self._docker.networks.create(self._network_name)
-
-# class FixDBDockerTestEnvironment(DockerTestEnvironment):
-#     def __init__(self, \
-#                 versions=METAFLOW_VERSIONS,\
-#                 flow_dir='./test_flows',\
-#                 temp_env_store='./tmp_verions',
-#                 max_ip_wait_time=20, database_name='metaflow', 
-#                 database_password='password', 
-#                 database_user='metaflow', 
-#                 dont_remove_containers=False, 
-#                 build_md_image=False, 
-#                 md_docker_image=None, 
-#                 database_port=5432, 
-#                 logger=None, 
-#                 with_md_logs=True, 
-#                 image_name='metaflow_metadata_service', 
-#                 network_name='postgres-network', 
-#                 image_build_path='../', 
-#                 docker_file_path=os.path.abspath('../Dockerfile')) -> None:
-#         super().__init__(versions=versions, 
-#                         flow_dir=flow_dir, 
-#                         temp_env_store=temp_env_store, 
-#                         max_ip_wait_time=max_ip_wait_time, 
-#                         database_name=database_name, 
-#                         database_password=database_password, 
-#                         database_user=database_user, 
-#                         dont_remove_containers=dont_remove_containers, 
-#                         build_md_image=build_md_image, md_docker_image=md_docker_image, 
-#                         database_port=database_port, 
-#                         logger=logger, with_md_logs=with_md_logs, 
-#                         image_name=image_name, 
-#                         network_name=network_name, 
-#                         image_build_path=image_build_path, 
-#                         docker_file_path=docker_file_path)
-    

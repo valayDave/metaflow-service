@@ -6,16 +6,16 @@ from env_buider import DockerTestEnvironment, METAFLOW_VERSIONS, POSTGRES_IMAGE
 # (version_number, migration_required, use_local)
 METADATA_MIGRATION_VERSIONS = [
     ("1.0.0",False, False),
-    ("1.0.1",False, False),
-    ("2.0.0",False, False),
-    ("2.0.1",True, False),
-    ("2.0.2",True, False),
-    ("2.0.3",True, False),
-    ("2.0.4",True, False),
-    ("2.0.5",True, False),
-    ("2.0.6",True, False),
-    ("latest",True, False),
-    (None, True, True),
+    # ("1.0.1",False, False),
+    # ("2.0.0",False, False),
+    # ("2.0.1",True, False),
+    # ("2.0.2",True, False),
+    # ("2.0.3",True, False),
+    # ("2.0.4",True, False),
+    # ("2.0.5",True, False),
+    # ("2.0.6",True, False),
+    # ("latest",True, False),
+    # (None, True, True),
 ]
 
 class MigrationFailingException(Exception):
@@ -67,7 +67,7 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
                         docker_file_path=docker_file_path)
 
     
-    def _teardown_database(self):
+    def teardown_database(self):
         # Don't do anything to teardown database. 
         pass
 
@@ -76,15 +76,16 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
             return super().get_tags() + [f'db_version:{self.db_version}']
 
     def destroy_database(self):
-        super()._teardown_database()
+        super().teardown_database()
     
-    def _setup_database(self):
+    def setup_database(self):
         # todo : Search for a postgres container if doesn't exist create one. 
         db_container = self._find_db_container() 
         if db_container is None:
-            super()._setup_database()
+            super().setup_database()
         else:
             self._database_container = db_container
+            self._database_host = self._resolve_ipaddr(self._database_container,wait_time=120)
         self._logger(f"Using DB container ID : {self._database_container.id}",fg='blue')
     
     def _find_db_container(self):
@@ -95,9 +96,9 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
             return None
         return containers[0]
 
-    def _setup_metadata_service(self):
+    def setup_metadata_service(self):
         # this will setup the MD container
-        super()._setup_metadata_service()
+        super().setup_metadata_service()
         time.sleep(10)
         self._perform_migration()
 
@@ -138,7 +139,7 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
         Returns:
             [type]: [description]
         """
-        schema_status_api = "http://localhost:8082/db_schema_status"
+        schema_status_api = f"{self.migrationservice_url}/db_schema_status"
         resp = requests.get(schema_status_api)
         if resp.status_code !=200:
             # this Means something Failed. 
@@ -152,7 +153,7 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
         Raises:
             MigrationFailingException: [when migration service error's out]
         """
-        schema_status_api = "http://localhost:8082/upgrade"
+        schema_status_api = f"{self.migrationservice_url}/upgrade"
         resp = requests.patch(schema_status_api)
         if resp.status_code !=200:
             # this Means something Failed. 
@@ -163,16 +164,26 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
 def execute_sequential_test(metadata_config=METADATA_MIGRATION_VERSIONS,**kwargs):
     environments = []
     final_results = []
-    for version_number, migration_required, use_local in metadata_config:
+    dont_remove_containers = False
+    if kwargs.pop('dont_remove_containers',False):
+        dont_remove_containers = True
+    
+    for idx,conf_tup in enumerate(metadata_config):
+        cont_remove_flag = False
+        version_number, migration_required, use_local = conf_tup
+        if dont_remove_containers:
+            if idx == len(metadata_config) - 1:
+                cont_remove_flag = True 
         environments.append(
             FixedDatabaseEnvironment(
                 run_migration=migration_required,
                 md_docker_image=version_number,
                 build_md_image=use_local,
+                dont_remove_containers=cont_remove_flag,
                 **kwargs
             )
         )
-
+    
     for env in environments:
         data_dict = dict(
             service_version='HEAD',
@@ -195,6 +206,7 @@ def execute_sequential_test(metadata_config=METADATA_MIGRATION_VERSIONS,**kwargs
         data_dict['migration_status_results'] = env.migration_response
         final_results.append(data_dict)
     
-    env.destroy_database()
+    if not dont_remove_containers:
+        env.destroy_database()
 
     return final_results

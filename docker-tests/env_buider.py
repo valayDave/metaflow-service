@@ -32,7 +32,107 @@ class IpNotResolved(Exception):
         self.line_no = lineno
         super(IpNotResolved, self).__init__()
 
-class DockerTestEnvironment:
+class IntegrationTestEnvironment:
+
+    def __init__(self) -> None:
+        self._logger = lambda x,**kwargs : print(x,**kwargs)
+
+    def create_environment(self):
+        raise NotImplementedError
+    
+    def teardown_environment(self):
+        raise NotImplementedError
+
+    def run_tests(self):
+        raise NotImplementedError
+    
+    def report_test(self):
+        return ''
+
+    def lifecycle(self):
+        test_results = []
+        self._logger('Creating New Environment',fg='green')
+        self._logger(self.report_test(),fg='green')
+        self.failed = False
+        self.error_stack_trace = None
+        self.error = None
+        try:
+            self.create_environment()
+            self._logger('Environment Created, Now Running Tests',fg='green')
+            test_results = self.run_tests()
+            self._logger('Finished Running Test ! Wohoo!',fg='green')
+        except Exception as e:
+            error_string = traceback.format_exc()
+            self.failed = True
+            self.error = e
+            self.error_stack_trace = error_string
+            self._logger(f'Something Failed ! {error_string}',fg='red')
+        finally:
+            self._logger("Tearing down environment",fg='green')
+            self.teardown_environment()
+        
+        return test_results
+
+class MetaflowIntegrationTest(IntegrationTestEnvironment):
+    def __init__(self) -> None:
+        self._metadataservice_url = None
+        self._database_host = None
+        self._database_port = None
+        self._database_user = None
+        self._database_password = None
+        self._database_name = None
+        self._migrationservice_url = None
+
+    @property
+    def metadataservice_url(self):
+        return self._metadataservice_url
+    
+    @property
+    def database_name(self):
+        return self._database_name
+
+    @property
+    def database_host(self):
+        return self._database_host
+
+    @property
+    def database_port(self):
+        return self._database_port
+    
+    @property
+    def database_user(self):
+        return self._database_user
+
+    @property
+    def database_password(self):
+        return self._database_password
+    
+    @property
+    def migrationservice_url(self):
+        return self._migrationservice_url
+
+    def create_environment(self):
+        # Build the image of the Metadata service.
+        self._logger('Creating Postgres Docker Container',fg='blue')
+        self.setup_database()
+        
+        self._logger('Building Metadata Image',fg='blue')
+        self.setup_metadata_service()
+        time.sleep(5)
+
+    def teardown_database(self):
+        raise NotImplementedError
+    
+    def setup_database(self):
+        raise NotImplementedError
+    
+    def teardown_metadata_service(self):
+        raise NotImplementedError
+    
+    def setup_metadata_service(self):
+        raise NotImplementedError
+
+class DockerTestEnvironment(MetaflowIntegrationTest):
     """ 
     Lifecycle :
         create_env 
@@ -130,7 +230,7 @@ class DockerTestEnvironment:
             pass
         return None
 
-    def _report_test(self):
+    def report_test(self):
         md_version = self.metadataservice_version
         return '\n\t'.join(
             ['Running test with parameters : \n\t']+[
@@ -141,38 +241,13 @@ class DockerTestEnvironment:
         ] + ['\n\t'])
             
     
-    def lifecycle(self):
-        # Create the network and the image. 
-        test_results = []
-        self._logger('Creating New Environment',fg='green')
-        self._logger(self._report_test(),fg='green')
-        self.failed = False
-        self.error_stack_trace = None
-        self.error = None
-        try:
-            self._create_enivornment()
-            self._logger('Environment Created, Now Running Tests',fg='green')
-            test_results = self._run_tests()
-            self._logger('Finished Running Test ! Wohoo!',fg='green')
-        except Exception as e:
-            error_string = traceback.format_exc()
-            self.failed = True
-            self.error = e
-            self.error_stack_trace = error_string
-            self._logger(f'Something Failed ! {error_string}',fg='red')
-        finally:
-            self._logger("Tearing down environment",fg='green')
-            self._teardown_environment()
-        
-        return test_results
-    
     def get_tags(self):
         return [
             f"service_version:{self.metadataservice_version}"
         ]
         
         
-    def _run_tests(self):
+    def run_tests(self):
         url = f"http://localhost:8080/"
         test_runner = MFTestRunner(
             self._flow_dir,
@@ -195,7 +270,7 @@ class DockerTestEnvironment:
             self._logger(message,fg=fg)
         return test_results
 
-    def _teardown_environment(self):
+    def teardown_environment(self):
         
         if self._with_md_logs:
             md_logs = str(self._metadataservice_container.logs().decode('utf-8'))
@@ -204,10 +279,8 @@ class DockerTestEnvironment:
         # If we set an arg not remove containers. 
         if not self._dont_remove_containers :
             self._logger('Stopping all containers',fg='blue')
-            self._teardown_metadata_service()
-            
-            self._teardown_database()
-            
+            self.teardown_metadata_service()
+            self.teardown_database()
             # Remove the network 
             if self._database_container is None:
                 self._logger('Removing Network',fg='blue')
@@ -221,8 +294,6 @@ class DockerTestEnvironment:
                 except APIError as e:
                     if e.status_code == 409:
                         self._logger(f'Unable to delete the Metadata image. \n {e.explanation}',fg='red')
-
-        
             # remove temporary directory of MF versions
             is_present = False
             try: 
@@ -240,9 +311,9 @@ class DockerTestEnvironment:
     
     def _db_env_vars(self):
         return dict(
-            POSTGRES_USER=self._database_user,
-            POSTGRES_PASSWORD=self._database_password ,
-            POSTGRES_DB=self._database_name
+            POSTGRES_USER=self.database_user,
+            POSTGRES_PASSWORD=self.database_password ,
+            POSTGRES_DB=self.database_name
         )
     
     def _resolve_ipaddr(self,container:Container,wait_time=None):
@@ -264,15 +335,13 @@ class DockerTestEnvironment:
         raise IpNotResolved(container_name=container.name,container_id=container.id)
 
     def _mdcontainer_env_vars(self):
-        ip_addr = None
-        ip_addr = self._resolve_ipaddr(self._database_container,wait_time=120)
-        self._logger(f'Using DB Ip Address {ip_addr} ',fg='green')
+        self._logger(f'Using DB Ip Address {self.database_host} ',fg='green')
         return dict(
-            MF_METADATA_DB_HOST = ip_addr,
-            MF_METADATA_DB_PORT = self._database_port,
-            MF_METADATA_DB_USER = self._database_user,
-            MF_METADATA_DB_PSWD = self._database_password,
-            MF_METADATA_DB_NAME = self._database_name,
+            MF_METADATA_DB_HOST = self.database_host,
+            MF_METADATA_DB_PORT = self.database_port,
+            MF_METADATA_DB_USER = self.database_user,
+            MF_METADATA_DB_PSWD = self.database_password,
+            MF_METADATA_DB_NAME = self.database_name,
         )
 
     def _mdservice_ports(self):
@@ -285,7 +354,7 @@ class DockerTestEnvironment:
             f'{self._database_port}/tcp':self._database_port,
         }
 
-    def _teardown_database(self):
+    def teardown_database(self):
         self._logger('Removing Database related container',fg='blue')
         if self._database_container is not None:
             self._teardown_container(self._database_container)
@@ -296,12 +365,13 @@ class DockerTestEnvironment:
         container.reload()
         container.remove()
     
-    def _teardown_metadata_service(self):
+    def teardown_metadata_service(self):
         self._logger('Removing MD service related container',fg='blue')
-        self._teardown_container(self._metadataservice_container)
-        self._metadataservice_container = None
+        if self._metadataservice_container is not None:
+            self._teardown_container(self._metadataservice_container)
+            self._metadataservice_container = None
 
-    def _setup_database(self):
+    def setup_database(self):
         # Create the Postgres container
         self._database_container = self._docker.containers.run(POSTGRES_IMAGE,\
                                             detach=True,\
@@ -309,11 +379,15 @@ class DockerTestEnvironment:
                                             name=self._database_container_name,\
                                             environment=self._db_env_vars(),\
                                             network=self._network_name,)
+        time.sleep(20)
+        self._database_host = self._resolve_ipaddr(self._database_container,wait_time=120)
 
-    def _setup_metadata_service(self):
+    def setup_metadata_service(self):
         self._metadata_image = self._build_mdservice_image()
         time.sleep(5)
         self._logger('Creating Metadata Service Container',fg='blue')
+        self._metadataservice_url = 'http://localhost:8080'
+        self._migrationservice_url = 'http://localhost:8082'
         # Create the metadata service container
         self._metadataservice_container = self._docker.containers.run(self._image_name,\
                                                     detach=True,\
@@ -324,7 +398,7 @@ class DockerTestEnvironment:
                                                     ports=self._mdservice_ports(),\
                                                     )
         
-    def _create_enivornment(self):
+    def create_environment(self):
         try:
             # If .metaflow is found then remove it 
             # this is done for fresh tests not conflicting with old tests
@@ -337,15 +411,9 @@ class DockerTestEnvironment:
         
         if self._network is None:
             self._network = self._create_network()
-        
-        # Build the image of the Metadata service.
-        self._logger('Creating Postgres Docker Container',fg='blue')
-        self._setup_database()
-        
-        self._logger('Building Metadata Image',fg='blue')
-        self._setup_metadata_service()
-        time.sleep(5)
 
+        super().create_environment()
+        
     
     def _build_mdservice_image(self):
         if self._build_md_image:

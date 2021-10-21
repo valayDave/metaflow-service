@@ -6,16 +6,15 @@ from env_buider import DockerTestEnvironment, METAFLOW_VERSIONS, POSTGRES_IMAGE
 # (version_number, migration_required, use_local)
 METADATA_MIGRATION_VERSIONS = [
     ("1.0.0",False, False),
-    # ("1.0.1",False, False),
-    # ("2.0.0",False, False),
-    # ("2.0.1",True, False),
-    # ("2.0.2",True, False),
-    # ("2.0.3",True, False),
-    # ("2.0.4",True, False),
-    # ("2.0.5",True, False),
-    # ("2.0.6",True, False),
-    # ("latest",True, False),
-    # (None, True, True),
+    ("1.0.1",False, False),
+    ("2.0.0",False, False),
+    ("2.0.1",True, False),
+    ("2.0.2",True, False),
+    ("2.0.3",True, False),
+    ("2.0.4",True, False),
+    ("2.0.5",True, False),
+    ("2.0.6",True, False),
+    (None, True, True),
 ]
 
 class MigrationFailingException(Exception):

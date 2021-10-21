@@ -1,4 +1,4 @@
-from metaflow import FlowSpec, step, batch, retry,current
+from metaflow import FlowSpec, step, Parameter
 
 class MultipleVersionFlow(FlowSpec):
     """
@@ -7,6 +7,9 @@ class MultipleVersionFlow(FlowSpec):
     Run this flow to validate your AWS configuration.
 
     """
+    num_cpus = Parameter('--cpu',default=10,help='Number of CPUS')
+    num_gpus = Parameter('--gpu',default=0,help='Number of GPUS')
+    
     @step
     def start(self):
         """
@@ -24,8 +27,7 @@ class MultipleVersionFlow(FlowSpec):
         print("'hello' step will run remotely on AWS batch. ")
         print("If you are running in the Netflix sandbox, ")
         print("it may take some time to acquire a compute resource.")
-        self.x = [i for i in range(10)]
-        self.next(self.hello,foreach='x')
+        self.next(self.hello,)
 
     @step
     def hello(self):
@@ -38,10 +40,7 @@ class MultipleVersionFlow(FlowSpec):
 
         """
         self.message = 'Hi from AWS!'
-        self.next(self.join)
-
-    @step
-    def join(self,inputs):
+        self.some_other_value = 10
         self.next(self.end)
 
     @step

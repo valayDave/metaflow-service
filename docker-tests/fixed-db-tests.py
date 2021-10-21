@@ -33,9 +33,10 @@ def logger(base_logger,*args,**kwargs):
 @click.option('--image-build-path',default='../')
 @click.option('--docker-file-path',default=os.path.abspath('../Dockerfile'))
 @click.option('--results-output-path',default=None)
+@click.option('--datastore',default='local',type=str)
 def run_tests(database_password=None, \
             flow_dir='./test_flows', \
-            temp_env_store='./tmp_verions', \
+            temp_env_store='./tmp_versions', \
             database_name='metaflow', \
             versions=None,\
             with_md_logs = False,\
@@ -43,12 +44,14 @@ def run_tests(database_password=None, \
             dont_remove_containers=False,
             database_port=5432, 
             image_build_path='../', 
+            datastore='local',
             docker_file_path=os.path.abspath('../Dockerfile'),\
             results_output_path=None):
     echo = partial(logger,click.secho)
     echo("Starting The Sequential DB + MD Compatibility Test",fg='green')
     test_env_args = dict(
         logger=echo,
+        datastore=datastore,
         database_password=database_password,\
         flow_dir = flow_dir,\
         with_md_logs=  with_md_logs,\

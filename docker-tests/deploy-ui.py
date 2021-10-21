@@ -14,7 +14,7 @@ MD_IMAGE_NAME = 'metaflow_metadata_service'
 TIME_FORMAT = "%Y-%m-%d %I:%M:%S %p"
 
 def logger(base_logger,*args,**kwargs):
-    msg = f'{datetime.datetime.now().strftime(TIME_FORMAT)} - Metaflow Integration Test Harness - {args[0]}'
+    msg = f'{datetime.datetime.now().strftime(TIME_FORMAT)} - UI Deployment Script - {args[0]}'
     base_logger(msg,**kwargs)
 
 
@@ -145,6 +145,8 @@ class DeployUi:
             MF_METADATA_DB_PSWD = self.database_password,
             MF_METADATA_DB_NAME = self.database_name,
         )
+        aws_vars = {k:os.environ[k] for k in os.environ if 'AWS' in k}
+        md_vars.update(aws_vars)
         self._ui_service_container = self._docker.containers.run(image.id,\
                                                     detach=True,\
                                                     stdin_open=True,\
@@ -182,7 +184,7 @@ class DeployUi:
 @click.option('--database-name',default='metaflow')
 @click.option('--database-user',default='metaflow')
 @click.option('--database-port',default=5432)
-@click.option('--version',help='Version of the UI to deploy')
+@click.option('--version', default='main',help='Version of the UI to deploy')
 def deploy_ui(version='0.17.0',\
             database_name='metaflow', \
             database_password=None, \

@@ -7,7 +7,7 @@ from env_buider import DockerTestEnvironment, METAFLOW_VERSIONS, POSTGRES_IMAGE
 METADATA_MIGRATION_VERSIONS = [
     ("1.0.0",False, False),
     ("1.0.1",False, False),
-    ("2.0.0",False, False),
+    ("2.0.0",True, False),
     ("2.0.1",True, False),
     ("2.0.2",True, False),
     ("2.0.3",True, False),
@@ -38,7 +38,8 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
                 database_user='metaflow', 
                 dont_remove_containers=False, 
                 build_md_image=False, 
-                md_docker_image=None, 
+                md_docker_image=None, \
+                datastore='local',
                 database_port=5432, 
                 logger=None, 
                 with_md_logs=True, 
@@ -52,6 +53,7 @@ class FixedDatabaseEnvironment(DockerTestEnvironment):
         super().__init__(versions=versions, 
                         flow_dir=flow_dir, 
                         temp_env_store=temp_env_store, 
+                        datastore=datastore,
                         max_ip_wait_time=max_ip_wait_time, 
                         database_name=database_name, 
                         database_password=database_password, 

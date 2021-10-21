@@ -167,6 +167,7 @@ class DockerTestEnvironment(MetaflowIntegrationTest):
                 md_docker_image = None,
                 database_port = 5432,
                 logger=None,
+                datastore='local',
                 with_md_logs = True,
                 image_name = 'metaflow_metadata_service',
                 network_name='postgres-network',\
@@ -194,6 +195,9 @@ class DockerTestEnvironment(MetaflowIntegrationTest):
         # Configuration related to MD Service Image 
         self._build_md_image = build_md_image
         self.md_docker_image = md_docker_image
+
+        # datastore related configuration
+        self._datastore = datastore
 
         # Configuration related to the containers for the test harness. 
         self._docker_file_path = docker_file_path
@@ -248,12 +252,18 @@ class DockerTestEnvironment(MetaflowIntegrationTest):
         
         
     def run_tests(self):
-        url = f"http://localhost:8080/"
+        url = self.metadataservice_url
+        data_store_dict = dict(datastore='local')
+        if self._datastore == 's3':
+            from metaflow.metaflow_config import DATASTORE_SYSROOT_S3,DATATOOLS_S3ROOT
+            data_store_dict['datastore'] = 's3'
+            data_store_dict['s3_datastore_root']=DATASTORE_SYSROOT_S3
+            data_store_dict['s3_datatools_root']=DATATOOLS_S3ROOT
         test_runner = MFTestRunner(
             self._flow_dir,
             EnvConfig(
                 tags = self.get_tags(),
-                datastore='local',
+                **data_store_dict,
                 metadata='service',
                 metadata_url=url
             ),

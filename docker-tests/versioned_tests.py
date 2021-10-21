@@ -56,6 +56,7 @@ METAFLOW_VERSIONS = [
     "2.3.5",
     "2.3.6",
     "2.4.0",
+    "2.4.1",
 ]
 def create_logger(logger_name:str,level=logging.INFO):
     custom_logger = logging.getLogger(logger_name)
@@ -149,6 +150,7 @@ class TestEnvironment:
         env.update({k: os.environ[k] for k in os.environ if k not in env})
         env.update(self.env_config.get_env())
         env["PYTHONPATH"] = self.python_path
+        cmd.extend(['--tag',f'mf-version:{self.version_number}'])
         if len(self.env_config.tags) > 1:
             for t in self.env_config.tags:
                 cmd.extend(['--tag',t])

@@ -16,6 +16,7 @@ import os
 @click.option('--database-user',default='metaflow')
 @click.option('--database-port',default=5432)
 @click.option('--versions',default=','.join(METAFLOW_VERSIONS))
+@click.option('--datastore',default='local') # can be local/s3
 @click.option('--image-build-path',default='../')
 @click.option('--docker-file-path',default=os.path.abspath('../Dockerfile'))
 @click.option('--results-output-path',default=None)
@@ -31,6 +32,7 @@ def run_tests(database_password=None, \
             database_user='metaflow', \
             database_port=5432, 
             image_build_path='../', 
+            datastore='local',
             docker_file_path=os.path.abspath('../Dockerfile'),\
             results_output_path=None):
     
@@ -40,6 +42,7 @@ def run_tests(database_password=None, \
         flow_dir = flow_dir,\
         with_md_logs=  with_md_logs,\
         versions=versions.split(','),
+        datastore=datastore,
         dont_remove_containers=dont_remove_containers,\
         temp_env_store = temp_env_store,\
         database_name = database_name,\

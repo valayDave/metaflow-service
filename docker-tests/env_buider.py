@@ -157,7 +157,7 @@ class DockerTestEnvironment(MetaflowIntegrationTest):
     def __init__(self,\
                 versions = METAFLOW_VERSIONS,\
                 flow_dir = './test_flows',\
-                temp_env_store='./tmp_verions',\
+                temp_env_store='./tmp_versions',\
                 max_ip_wait_time = 20,\
                 database_name='metaflow',
                 database_password='password',

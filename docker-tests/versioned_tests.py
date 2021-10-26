@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import glob
 from sys import version
+import traceback
 import venv
 import uuid
 import shutil
@@ -13,7 +14,12 @@ import logging
 import click
 import time
 import re
+from functools import partial
 import json
+import click
+import datetime
+TIME_FORMAT = "%Y-%m-%d %I:%M:%S %p"
+
 WORKFLOW_EXTRACT_REGEX = re.compile('\(run-id (?P<runid>[a-zA-Z0-9_-]+)',re.IGNORECASE)
 FLOW_EXTRACTOR_REGEX = re.compile('^(\S+) (\S+) (\S+) (?P<flow>[A-Za-z0-9_]+) (\S+) (\S+)',re.IGNORECASE)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -27,11 +33,11 @@ def save_json(data,pth):
         json.dump(data,f)
 
 METAFLOW_VERSIONS = [
-    "2.0.1",
-    "2.0.2",
-    "2.0.3",
-    "2.0.4",
-    "2.0.5",
+    # "2.0.1",
+    # "2.0.2",
+    # "2.0.3",
+    # "2.0.4",
+    # "2.0.5",
     "2.1.0",
     "2.1.1",
     "2.2.0",
@@ -77,14 +83,19 @@ def is_present(pth):
 
 class EnvConfig:
     def __init__(self,\
+                # possible values batch,stepfn,kubernetes etc. 
+                execute_on = 'local', 
                 datastore='local',\
+                metadata_auth=None,\
                 s3_datastore_root=None,\
                 s3_datatools_root=None,\
                 tags = [],\
                 metadata='local',\
                 metadata_url=None) -> None:
         self.datastore= datastore
+        self.execute_on = execute_on
         self.tags =tags
+        self.metadata_auth = metadata_auth
         self.s3_datastore_root= s3_datastore_root
         self.metadata= metadata
         self.metadata_url= metadata_url
@@ -98,6 +109,11 @@ class EnvConfig:
         if self.metadata == 'service':
             assert self.metadata_url is not None and self.metadata != 'local'
         
+        if self.execute_on == 'step-functions':
+            assert self.datastore == 's3' and self.metadata == 'service', "Step Functions requires S3 and MD service"
+        elif self.execute_on == 'batch':
+            assert self.datastore == 's3'
+
     
     def get_env(self):
         env_dict = {}
@@ -113,6 +129,8 @@ class EnvConfig:
         else:
             env_dict['METAFLOW_DEFAULT_METADATA'] = 'service'
             env_dict['METAFLOW_SERVICE_URL'] = self.metadata_url
+            if self.metadata_auth is not None:
+                env_dict['METAFLOW_SERVICE_AUTH_KEY'] = self.metadata_auth
         return env_dict
 
 class TestEnvironment:
@@ -139,6 +157,43 @@ class TestEnvironment:
         return hex(hash(version_number))
 
     def execute_flow(self,file_pth,batch=False,):
+        if self.env_config.execute_on == 'local':
+            return self.local_execution(file_pth,batch=batch)
+        elif self.env_config.execute_on =='step-functions':
+            return self.step_functions_execution(file_pth)
+            
+
+    def step_functions_execution(self,file_pth):
+        create_cmd = [
+            self.python_path,
+            file_pth,
+            'step-functions',
+            'create',
+        ]
+        exec_cmd = [
+            self.python_path,
+            file_pth,
+            'step-functions',
+            'trigger',
+        ]
+        env = {}
+        env.update({k: os.environ[k] for k in os.environ if k not in env})
+        env.update(self.env_config.get_env())
+        env["PYTHONPATH"] = self.python_path
+        create_cmd.extend(['--tag',f'mf-version:{self.version_number}'])
+        if len(self.env_config.tags) > 1:
+            for t in self.env_config.tags:
+                create_cmd.extend(['--tag',t])
+
+        create_response,fail = self._run_command(create_cmd,env)
+        trigger_response,fail = self._run_command(exec_cmd,env)
+
+        return dict(success=not fail,**self._get_runid(trigger_response,step_fn=True))
+    
+
+
+
+    def local_execution(self,file_pth,batch=False):
         cmd = [
             self.python_path,
             file_pth,
@@ -159,13 +214,16 @@ class TestEnvironment:
         return dict(success=not fail,**self._get_runid(run_response))
        
 
-    def _get_runid(self,run_response):
+    def _get_runid(self,run_response,step_fn=False):
         # Todo Improve ways to get the runID's
         lines = run_response.decode('utf-8').split('\n')
         # print(lines)
         flow,runid=None,None
         try:
-            runidstr=run_response.decode('utf-8').split(' Workflow starting ')[1]
+            if step_fn:
+                runidstr=run_response.decode('utf-8').split(' triggered on AWS Step Functions ')[1]
+            else:
+                runidstr=run_response.decode('utf-8').split(' Workflow starting ')[1]
             datadict = WORKFLOW_EXTRACT_REGEX.match(runidstr).groupdict()
             runid = datadict['runid']
             flow = FLOW_EXTRACTOR_REGEX.match(lines[0]).groupdict()['flow']
@@ -276,10 +334,12 @@ class MFTestRunner:
                 envionment_config:EnvConfig,
                 max_concurrent_tests= 2,\
                 versions=METAFLOW_VERSIONS,\
-                temp_env_store='./tmp_verions') -> None:
+                logger=None,
+                temp_env_store='./tmp_versions') -> None:
         self.flow_files = glob.glob(os.path.join(flow_dir,"*_testflow.py"))
         self.versions = versions
         self._max_concurrent_tests = max_concurrent_tests
+        self._logger = logger
         self.envionment_config = envionment_config
         # Todo : figure test concurrency
         # todo assert versions are the same as `METAFLOW_VERSIONS`
@@ -298,17 +358,41 @@ class MFTestRunner:
         tests = self._make_tests()
         results = []
         for test in tests:
+            error_stack_trace = None
             try:
                 p = run_test(*test)
                 results.extend(load_json(p))
             except Exception as e:
-                print(e)
+                error_stack_trace = traceback.format_exc()
+            if self._logger is not None:
+                if error_stack_trace is None:
+                    self._logger("Completed Test For Version: %s , Executed on : %s"%(test[0],test[3].execute_on),fg='green')
+                else:
+                    self._logger("Failed Test For Version: %s , Executed on : %s With stacktrace : \n\n %s"%(test[0],test[3].execute_on,error_stack_trace),fg='red')
         shutil.rmtree(self.temp_env_store)
         return results
 
+# def logger(base_logger,*args,**kwargs):
+#     msg = f'{datetime.datetime.now().strftime(TIME_FORMAT)} - Metaflow Integration Test Harness - {args[0]}'
+#     base_logger(msg,**kwargs)
 
 # def run_tests():
-#     test_runner = MFTestRunner('./test_flows',EnvConfig(),versions=METAFLOW_VERSIONS,)
+#     from metaflow.metaflow_config import DATASTORE_SYSROOT_S3,DATATOOLS_S3ROOT,METADATA_SERVICE_URL,METADATA_SERVICE_AUTH_KEY
+#     echo = partial(logger,click.secho)
+#     test_runner = MFTestRunner(
+#         './test_flows',
+#         EnvConfig(
+#             execute_on='step-functions',
+#             datastore='s3',
+#             metadata='service',
+#             s3_datastore_root=DATASTORE_SYSROOT_S3,
+#             s3_datatools_root=DATATOOLS_S3ROOT,
+#             metadata_url=METADATA_SERVICE_URL,
+#             metadata_auth=METADATA_SERVICE_AUTH_KEY
+#         ),
+#         logger=echo,
+#         versions=METAFLOW_VERSIONS,
+#         )
 #     test_runner.run_tests()
 
 # if __name__ == '__main__':

@@ -1,14 +1,16 @@
 from metaflow import FlowSpec, step, Parameter
 
-class MultipleVersionFlow(FlowSpec):
+class MetaflowFinalTestFlow(FlowSpec):
     """
     A flow where Metaflow prints 'Metaflow says Hi from AWS!'
 
     Run this flow to validate your AWS configuration.
 
     """
-    num_cpus = Parameter('--cpu',default=10,help='Number of CPUS')
-    num_gpus = Parameter('--gpu',default=0,help='Number of GPUS')
+    # Apparently `--cpu` is not a good cli arg. 
+    # Loudly fails on step-functions with `/bin/sh: 1: export: METAFLOW_INIT_--CPU: bad variable name`
+    num_cpus = Parameter('num_cpu',default=10,help='Number of CPUS')
+    num_gpus = Parameter('num_gpu',default=0,help='Number of GPUS')
     
     @step
     def start(self):
@@ -22,11 +24,7 @@ class MultipleVersionFlow(FlowSpec):
         print("HelloAWS is starting.")
         print("")
         print("Using metadata provider: %s" % get_metadata())
-        print("")
-        print("The start step is running locally. Next, the ")
-        print("'hello' step will run remotely on AWS batch. ")
-        print("If you are running in the Netflix sandbox, ")
-        print("it may take some time to acquire a compute resource.")
+        print("Something something something")
         self.next(self.hello,)
 
     @step
@@ -50,8 +48,8 @@ class MultipleVersionFlow(FlowSpec):
         which the flow is executed.
 
         """
-        print("MultipleVersionFlow is finished.")
+        print("MetaflowTestFlow is finished.")
 
 
 if __name__ == '__main__':
-    MultipleVersionFlow()
+    MetaflowFinalTestFlow()

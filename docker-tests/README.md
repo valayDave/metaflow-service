@@ -14,6 +14,8 @@ There are three key scripts which perform the following tasks:
 
 3. `deploy-ui.py`: This script will deploy the metaflow UI. It expects an already available postgres database with metaflow's database on it. The UI on deployment will be available on `http://localhost:8083`. 
 
+4. `local_tests.py` **[METAFLOW CLIENT VERSION TEST]**: This script will run all flows in `test_flows` with all released versions of the metaflow client and collect the results of the successful runs. 
+
 ## How to run the tests ? 
 
 ### Quick Run 

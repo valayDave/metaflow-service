@@ -371,29 +371,3 @@ class MFTestRunner:
                     self._logger("Failed Test For Version: %s , Executed on : %s With stacktrace : \n\n %s"%(test[0],test[3].execute_on,error_stack_trace),fg='red')
         shutil.rmtree(self.temp_env_store)
         return results
-
-# def logger(base_logger,*args,**kwargs):
-#     msg = f'{datetime.datetime.now().strftime(TIME_FORMAT)} - Metaflow Integration Test Harness - {args[0]}'
-#     base_logger(msg,**kwargs)
-
-# def run_tests():
-#     from metaflow.metaflow_config import DATASTORE_SYSROOT_S3,DATATOOLS_S3ROOT,METADATA_SERVICE_URL,METADATA_SERVICE_AUTH_KEY
-#     echo = partial(logger,click.secho)
-#     test_runner = MFTestRunner(
-#         './test_flows',
-#         EnvConfig(
-#             execute_on='step-functions',
-#             datastore='s3',
-#             metadata='service',
-#             s3_datastore_root=DATASTORE_SYSROOT_S3,
-#             s3_datatools_root=DATATOOLS_S3ROOT,
-#             metadata_url=METADATA_SERVICE_URL,
-#             metadata_auth=METADATA_SERVICE_AUTH_KEY
-#         ),
-#         logger=echo,
-#         versions=METAFLOW_VERSIONS,
-#         )
-#     test_runner.run_tests()
-
-# if __name__ == '__main__':
-#     run_tests()

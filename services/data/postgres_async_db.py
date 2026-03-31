@@ -13,6 +13,7 @@ from typing import List, Tuple
 from .db_utils import DBResponse, DBPagination, aiopg_exception_handling, \
     get_db_ts_epoch_str, translate_run_key, translate_task_key, new_heartbeat_ts
 from .models import FlowRow, RunRow, StepRow, TaskRow, MetadataRow, ArtifactRow
+from . import query_tracing
 from services.utils import DBConfiguration, USE_SEPARATE_READER_POOL
 
 from services.data.service_configs import max_connection_retires, \
@@ -249,10 +250,35 @@ class AsyncPostgresTable(object):
                           expanded=False, limit: int = 0, offset: int = 0,
                           cur: aiopg.Cursor = None, serialize: bool = True) -> Tuple[DBResponse, DBPagination]:
         async def _execute_on_cursor(_cur):
-            await _cur.execute(select_sql, values)
+            tracer = query_tracing.get_active_tracer()
+            query_started_at = time.perf_counter() if tracer else None
+
+            try:
+                await _cur.execute(select_sql, values)
+                records = await _cur.fetchall()
+            except Exception as error:
+                if tracer:
+                    tracer.record_query(
+                        table_name=self.table_name,
+                        row_count=0,
+                        db_time_ms=(time.perf_counter() - query_started_at) * 1000,
+                        success=False,
+                        error_type=error.__class__.__name__,
+                        sql_template=select_sql,
+                    )
+                raise
+
+            row_count = len(records)
+            if tracer:
+                tracer.record_query(
+                    table_name=self.table_name,
+                    row_count=row_count,
+                    db_time_ms=(time.perf_counter() - query_started_at) * 1000,
+                    success=True,
+                    sql_template=select_sql,
+                )
 
             rows = []
-            records = await _cur.fetchall()
             if serialize:
                 for record in records:
                     # pylint-initial-ignore: Lack of __init__ makes this too hard for pylint
@@ -262,14 +288,12 @@ class AsyncPostgresTable(object):
             else:
                 rows = records
 
-            count = len(rows)
-
             # Will raise IndexError in case fetch_single=True and there's no results
             body = rows[0] if fetch_single else rows
             pagination = DBPagination(
                 limit=limit,
                 offset=offset,
-                count=count,
+                count=row_count,
                 page=math.floor(int(offset) / max(int(limit), 1)) + 1,
             )
             return body, pagination

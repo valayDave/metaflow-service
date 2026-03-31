@@ -6,6 +6,7 @@ import psycopg2
 import psycopg2.extras
 from aiohttp import web
 from services.data.postgres_async_db import AsyncPostgresDB
+import services.data.query_tracing as query_tracing
 from services.utils.tests import get_test_dbconf
 from services.metadata_service.api.admin import AuthApi
 from services.metadata_service.api.flow import FlowApi
@@ -25,6 +26,8 @@ from services.migration_service.data.postgres_async_db import \
 
 async def init_app(aiohttp_client, queue_ttl=30):
     app = web.Application()
+    if query_tracing.QUERY_TRACING_ENABLED:
+        app.middlewares.append(query_tracing.query_tracing_middleware)
 
     # Migration routes as a subapp
     migration_app = web.Application()
